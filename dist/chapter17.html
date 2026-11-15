@@ -15,8 +15,8 @@
     <div class="sidebar-backdrop"></div>
     <nav class="sidebar">
     <div class="sidebar-header">
-        <h1><a href="/index.html" style="color:#fff;text-decoration:none;">The Cluster Book</a></h1>
-        <p>Official Language Guide &middot; <strong>Cluster-SSG</strong></p>
+        <h1><a href="/index.html">The Cluster Book</a></h1>
+        <p>Official Language Guide</p>
     </div>
     <ul class="sidebar-nav">
         <li><a href="/index.html">Home</a></li>
@@ -69,7 +69,7 @@
 <hr />
 <h2 id="2--complete-training-loop-example">2. Complete Training Loop Example</h2>
 <p>Below is a complete, copy-pasteable Cluster-lang example showcasing loading a JSON dataset of features and labels, defining a linear regression layer, and training the model using Stochastic Gradient Descent (SGD) with autograd backpropagation:</p>
-<pre><code class="language-zk">import cl-json as json
+<div class="language-zk highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-zk">import cl-json as json
 import cl-dl as dl
 
 model DataPoint:
@@ -117,7 +117,7 @@ fn main():
         if epoch % 20 == 0:
             put "Epoch " + to_text(epoch) + " - Loss: " + to_text(loss.item())
             
-    put "=== Training Complete ==="</code></pre>
+    put "=== Training Complete ==="</code></pre></div></div>
 <hr />
 <h2 id="3--advantages-of-training-in-cluster-lang">3. Advantages of Training in Cluster-lang</h2>
 <p>Why train AI models in Cluster-lang rather than traditional Python or raw C++?</p>
@@ -127,12 +127,12 @@ fn main():
 <p>Unlike Java or Python, which rely on background garbage collectors (GC) that introduce latency spikes and heavy memory consumption, Cluster-lang uses value semantics and compile-time ownership tracking. This yields low, predictable RAM utilization, making it possible to train edge models on resource-constrained IoT devices.</p>
 <h3 id="c--direct-hardware--cuda-dispatch">C. Direct Hardware & CUDA Dispatch</h3>
 <p>Cluster-lang's <code>Tensor</code> engine supports direct device targets:</p>
-<pre><code class="language-zk">// Allocates memory directly on the GPU VRAM
+<div class="language-zk highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-zk">// Allocates memory directly on the GPU VRAM
 t1 := tensor_ones_cuda(1000, 1000)
 t2 := tensor_ones_cuda(1000, 1000)
 
 // Executes matrix multiplication directly on the GPU
-result := tensor_matmul(t1, t2)</code></pre>
+result := tensor_matmul(t1, t2)</code></pre></div></div>
 <p>Computations are dispatched directly to CUDA/GPU hardware, utilizing native memory layouts without copying data back and forth to the host CPU.</p>
 <hr />
 <h2 id="4--is-cluster-good-for-ai-training">4. Is Cluster Good for AI Training?</h2>
@@ -151,6 +151,11 @@ result := tensor_matmul(t1, t2)</code></pre>
     <span>[Interactive Island: Counter]</span>
   </div>
 </cluster-island>
+
+<div class="chapter-nav">
+  <a href="/chapter16.html">&larr; Chapter 16</a>
+  <a href="/chapter18.html">Chapter 18 &rarr;</a>
+</div>
 
         </article>
     </main>

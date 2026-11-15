@@ -15,8 +15,8 @@
     <div class="sidebar-backdrop"></div>
     <nav class="sidebar">
     <div class="sidebar-header">
-        <h1><a href="/index.html" style="color:#fff;text-decoration:none;">The Cluster Book</a></h1>
-        <p>Official Language Guide &middot; <strong>Cluster-SSG</strong></p>
+        <h1><a href="/index.html">The Cluster Book</a></h1>
+        <p>Official Language Guide</p>
     </div>
     <ul class="sidebar-nav">
         <li><a href="/index.html">Home</a></li>
@@ -63,27 +63,52 @@
 <h2 id="1--understanding-traits">1. Understanding Traits</h2>
 <p>In software design, you often need to express that multiple distinct types share some common functionality. While object-oriented languages typically use interfaces or base classes with virtual methods, Cluster-lang approaches this through <strong>traits</strong>.</p>
 <p>A trait defines a set of function signatures that a model must implement to satisfy the trait. This approach offers several advantages:</p>
-<p>| Language Concept | Dispatch Type | Performance Overhead |</p>
-<p>| :--- | :--- | :--- |</p>
-<p>| Java/C# Interfaces | Dynamic (vtable) | High (cache misses, indirect calls) |</p>
-<p>| Go Interfaces | Dynamic (itab) | Medium (interface wrapper allocation) |</p>
-<p>| Rust Traits | Static (default) | None (compile-time resolution) |</p>
-<p>| <strong>Cluster-lang Traits</strong> | <strong>Static (C++20 Concepts)</strong> | <strong>None (zero-overhead)</strong> |</p>
+<table>
+<thead>
+<tr>
+  <th>Language Concept</th>
+  <th>Dispatch Type</th>
+  <th>Performance Overhead</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Java/C# Interfaces</td>
+  <td>Dynamic (vtable)</td>
+  <td>High (cache misses, indirect calls)</td>
+</tr>
+<tr>
+  <td>Go Interfaces</td>
+  <td>Dynamic (itab)</td>
+  <td>Medium (interface wrapper allocation)</td>
+</tr>
+<tr>
+  <td>Rust Traits</td>
+  <td>Static (default)</td>
+  <td>None (compile-time resolution)</td>
+</tr>
+<tr>
+  <td><strong>Cluster-lang Traits</strong></td>
+  <td><strong>Static (C++20 Concepts)</strong></td>
+  <td><strong>None (zero-overhead)</strong></td>
+</tr>
+</tbody>
+</table>
 <p>Cluster-lang traits guarantee that all abstractions are resolved at compile-time. There is no virtual method table (vtable) overhead and no runtime penalty, making them ideal for high-performance systems engineering.</p>
 <hr />
 <h2 id="2--defining-a-trait">2. Defining a Trait</h2>
 <p>Defining a trait in Cluster-lang is straightforward. You use the <code>trait</code> keyword followed by the trait name and a block containing function signatures.</p>
-<pre><code class="language-python">trait Printable:
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">trait Printable:
     fn to_string(self) -> string
 
 trait Shape:
     fn area(self) -> float64
-    fn perimeter(self) -> float64</code></pre>
+    fn perimeter(self) -> float64</code></pre></div></div>
 <p>These definitions act as templates for required behavior. Any model that implements the functions exactly as defined automatically satisfies the trait contract.</p>
 <hr />
 <h2 id="3--generic-constraints">3. Generic Constraints</h2>
 <p>Traits are most useful when combined with generic programming. In Cluster-lang, you can restrict generic type parameters to ensure they implement specific traits. This is done using the syntax <code>[T: TraitName]</code> or <code>[T implements TraitName]</code>.</p>
-<pre><code class="language-python">fn log_item[T: Printable](item: T):
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">fn log_item[T: Printable](item: T):
     # The compiler knows 'item' has a to_string() method
     put "Log: " + item.to_string()
 
@@ -91,21 +116,21 @@ fn calculate_total_area[T: Shape](items: []T) -> float64:
     total := 0.0
     for item in items:
         total = total + item.area()
-    return total</code></pre>
+    return total</code></pre></div></div>
 <p>If you try to pass a type that does not implement the required methods, the compiler will catch it immediately, preventing runtime errors.</p>
 <hr />
 <h2 id="4--under-the-hood-c20-concepts">4. Under the Hood: C++20 Concepts</h2>
 <p>One of Cluster-lang's unique strengths is how it leverages modern C++ features during compilation. When you define a trait and use it as a generic constraint, the transpiler converts this directly into <strong>C++20 Concepts</strong>.</p>
 <p>For instance, the <code>Printable</code> trait compiles to a C++ concept similar to this:</p>
-<pre><code class="language-cpp">template<typename T>
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-cpp">template<typename T>
 concept Printable = requires(T a) {
     { a.to_string() } -> std::same_as<std::string>;
-};</code></pre>
+};</code></pre></div></div>
 <p>This mapping means that generic functions in Cluster-lang compile into C++ templates constrained by these concepts. The C++ compiler then generates optimized, type-specific code for every distinct type used with the generic function. The result is pure, direct function calls—matching the performance of handwritten C without sacrificing Pythonic readability.</p>
 <hr />
 <h2 id="5--complete-working-example">5. Complete Working Example</h2>
 <p>Let's put it all together with a comprehensive example showing trait definition, model implementation, and constrained generic functions.</p>
-<pre><code class="language-python">trait Printable:
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">trait Printable:
     fn to_string(self) -> string
 
 model Point:
@@ -134,7 +159,7 @@ fn main():
     
     # Both types work seamlessly with zero runtime dispatch cost
     print_item(p)
-    print_item(u)</code></pre>
+    print_item(u)</code></pre></div></div>
 <p>In this example, calling <code>print_item</code> with a <code>Point</code> and a <code>User</code> causes the compiler to generate two separate, highly optimized versions of the function, ensuring bare-metal performance while maintaining clean, readable code.</p>
 <hr />
 <h3 id="chapter-navigation">Chapter Navigation</h3>
@@ -149,6 +174,11 @@ fn main():
     <span>[Interactive Island: Counter]</span>
   </div>
 </cluster-island>
+
+<div class="chapter-nav">
+  <a href="/chapter18.html">&larr; Chapter 18</a>
+  <a href="/chapter20.html">Chapter 20 &rarr;</a>
+</div>
 
         </article>
     </main>

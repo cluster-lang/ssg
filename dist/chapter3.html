@@ -15,8 +15,8 @@
     <div class="sidebar-backdrop"></div>
     <nav class="sidebar">
     <div class="sidebar-header">
-        <h1><a href="/index.html" style="color:#fff;text-decoration:none;">The Cluster Book</a></h1>
-        <p>Official Language Guide &middot; <strong>Cluster-SSG</strong></p>
+        <h1><a href="/index.html">The Cluster Book</a></h1>
+        <p>Official Language Guide</p>
     </div>
     <ul class="sidebar-nav">
         <li><a href="/index.html">Home</a></li>
@@ -62,7 +62,7 @@
 <hr />
 <h2 id="1--defining-models">1. Defining Models</h2>
 <p>Models hold fields (properties) and methods:</p>
-<pre><code class="language-python">model Address:
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">model Address:
     city: string
     zipcode: int
 
@@ -74,30 +74,30 @@ model User:
         // Methods can access local fields
         if self.address == None:
             return "Unknown"
-        return self.address.city</code></pre>
+        return self.address.city</code></pre></div></div>
 <hr />
 <h2 id="2--instantiating-models">2. Instantiating Models</h2>
 <p>To instantiate a model, use the <code>box</code> keyword (which wraps it in a unique-pointer heap allocation) or construct it inline:</p>
-<pre><code class="language-python">// 1. Create a heap-allocated Address
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">// 1. Create a heap-allocated Address
 addr := box Address(city="New York", zipcode=10001)
 
 // 2. Pass it to a User instance (note the move semantics for boxes!)
-user := box User(name="John", address=move(addr))</code></pre>
+user := box User(name="John", address=move(addr))</code></pre></div></div>
 <hr />
 <h2 id="3--optional-chaining--">3. Optional Chaining (<code>?.</code>)</h2>
 <p>To access fields or call methods on potentially null reference pointers without manual nested <code>if</code> statements, use the optional chaining (<code>?.</code>) operator:</p>
-<pre><code class="language-python">// If user or user.address is None, this safely evaluates to None without crashing!
-city_name := user?.address?.city</code></pre>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">// If user or user.address is None, this safely evaluates to None without crashing!
+city_name := user?.address?.city</code></pre></div></div>
 <p>If any reference along the chain evaluates to <code>None</code>, the execution stops and evaluates to <code>None</code> immediately.</p>
 <hr />
 <h2 id="4--null-coalescing-">4. Null Coalescing (<code>??</code>)</h2>
 <p>The null coalescing operator (<code>??</code>) evaluates to the left-hand operand if it is not null/empty, or returns the fallback right-hand value otherwise:</p>
-<pre><code class="language-python">// Checks if city_name is None or empty. If so, defaults to "Unknown City"
-current_city := city_name ?? "Unknown City"</code></pre>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">// Checks if city_name is None or empty. If so, defaults to "Unknown City"
+current_city := city_name ?? "Unknown City"</code></pre></div></div>
 <h3 id="combining-optional-chaining--null-coalescing">Combining Optional Chaining & Null Coalescing</h3>
 <p>You can combine these two operators to write bulletproof, concise member access pipelines:</p>
-<pre><code class="language-python">city := user?.address?.city ?? "Default City"
-put city</code></pre>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">city := user?.address?.city ?? "Default City"
+put city</code></pre></div></div>
 <p>This evaluates to the city name if the path is fully valid, or defaults safely to <code>"Default City"</code>.</p>
 <hr />
 <h3 id="chapter-navigation">Chapter Navigation</h3>
@@ -112,6 +112,11 @@ put city</code></pre>
     <span>[Interactive Island: Counter]</span>
   </div>
 </cluster-island>
+
+<div class="chapter-nav">
+  <a href="/chapter2.html">&larr; Chapter 2</a>
+  <a href="/chapter4.html">Chapter 4 &rarr;</a>
+</div>
 
         </article>
     </main>

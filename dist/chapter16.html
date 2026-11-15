@@ -15,8 +15,8 @@
     <div class="sidebar-backdrop"></div>
     <nav class="sidebar">
     <div class="sidebar-header">
-        <h1><a href="/index.html" style="color:#fff;text-decoration:none;">The Cluster Book</a></h1>
-        <p>Official Language Guide &middot; <strong>Cluster-SSG</strong></p>
+        <h1><a href="/index.html">The Cluster Book</a></h1>
+        <p>Official Language Guide</p>
     </div>
     <ul class="sidebar-nav">
         <li><a href="/index.html">Home</a></li>
@@ -62,12 +62,12 @@
 <hr />
 <h2 id="1--architecture-overview">1. Architecture Overview</h2>
 <p>The compiler bridge translates the standard Jekyll directory structure (<code>_layouts</code>, <code>_posts</code>, <code>_includes</code>, and <code>_config.yml</code>) into native Cluster components (<code>.clx</code>) and pre-renders Liquid loop blocks into raw static pages.</p>
-<pre><code class="language-mermaid">graph TD
+<div class="language-mermaid highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-mermaid">graph TD
     A[Jekyll Source Files] -->|Pre-Processor| B[Liquid Loop & Variable Pre-rendering]
     B -->|Transpiler| C[Inherited Layouts -> clx Components]
     C -->|Cluster Compiler| D[Native C++ Binary: main.out]
     D -->|Build Action| E[Static HTML output in _site/ in milliseconds]
-    D -->|Serve Action| F[Ultra-Fast C++ Socket Server at http://localhost:8080]</code></pre>
+    D -->|Serve Action| F[Ultra-Fast C++ Socket Server at http://localhost:8080]</code></pre></div></div>
 <h3 id="key-differences">Key Differences:</h3>
 <ul>
   <li><strong>No Ruby VM:</strong> Bypasses slow Ruby VM start-up times entirely.</li>
@@ -79,11 +79,11 @@
 <p>To build or serve your Jekyll project, use the native <code>cluster</code> CLI commands.</p>
 <h3 id="a--building-the-static-site">A. Building the Static Site</h3>
 <p>To compile the project and generate the static site files inside the <code>_site/</code> directory, run:</p>
-<pre><code class="language-bash">cluster --jekyll build</code></pre>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-bash">cluster --jekyll build</code></pre></div></div>
 <p>The compiler parses all layouts, processes the posts, wraps the content, and outputs clean static files in milliseconds.</p>
 <h3 id="b--launching-the-local-serve-server">B. Launching the Local Serve Server</h3>
 <p>To spin up a high-performance, non-blocking C++ server to test your site locally:</p>
-<pre><code class="language-bash">cluster --jekyll serve</code></pre>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-bash">cluster --jekyll serve</code></pre></div></div>
 <p>This launches a native web server on <code>http://localhost:8080</code> with response times under <strong>1.5 milliseconds</strong>, bypassing slow file-watchers and node blockers.</p>
 <hr />
 <h2 id="3--high-performance-socket-routing">3. High-Performance Socket Routing</h2>
@@ -92,11 +92,11 @@
 <p>1. <strong>Zero-Delay Connections:</strong> Closes connections gracefully immediately after header consumption and response streaming, avoiding socket-blocking <code>recv</code> bottlenecks.</p>
 <p>2. <strong>Directory & Index Mapping:</strong> Automatically maps paths (e.g. <code>/blog/news</code>) to their respective index files (<code>_site/blog/news/index.html</code>).</p>
 <p>3. <strong>Asset Mime-Type Auto-detection:</strong> Instantly reads and returns correct headers for <code>.css</code>, <code>.js</code>, <code>.png</code>, <code>.jpg</code>, <code>.svg</code>, and <code>.json</code> assets.</p>
-<pre><code class="language-python">// Conceptual representation of the compiled server loop
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">// Conceptual representation of the compiled server loop
 fn start_jekyll_server():
     put "[Cluster-Jekyll] Serving at http://localhost:8080"
     // Starts server using optimized stdlib routing pointing to _site/
-    serve_web(8080, home_html)</code></pre>
+    serve_web(8080, home_html)</code></pre></div></div>
 <hr />
 <h2 id="4--bypassing-jekyll-weaknesses">4. Bypassing Jekyll Weaknesses</h2>
 <p>Standard Jekyll suffers from a lack of dynamic server-side capabilities. With Cluster-Jekyll, you can easily transition from a static site to a dynamic server:</p>
@@ -109,12 +109,42 @@ fn start_jekyll_server():
 <hr />
 <h2 id="5--performance-benchmarks-100000-newspaper-articles">5. Performance Benchmarks: 100,000 Newspaper Articles</h2>
 <p>To prove the raw power of the compiled C++ layout architecture, we ran a benchmark building a simulated large-scale news site consisting of <strong>100,000 article markdown files</strong>, structured with standard layouts, category listings, and tags:</p>
-<p>| Metric / Generator | Standard Jekyll (Ruby) | Astro (Node.js/Vite) | Cluster-Jekyll (Compiled C++) |</p>
-<p>| :--- | :--- | :--- | :--- |</p>
-<p>| <strong>Build Time</strong> | ~28 minutes (or VM crash) | ~4.5 minutes (270s) | <strong>18.4 seconds</strong> |</p>
-<p>| <strong>Throughput</strong> | ~60 pages/sec | ~370 pages/sec | <strong>5,430 pages/sec</strong> |</p>
-<p>| <strong>Memory Footprint</strong>| >3.2 GB RAM (GC heavy) | ~1.8 GB RAM | <strong>124 MB RAM</strong> |</p>
-<p>| <strong>Binary Output</strong> | No (interprets on Ruby) | No (JS Bundle/Node) | <strong>Yes (Single executable binary)</strong> |</p>
+<table>
+<thead>
+<tr>
+  <th>Metric / Generator</th>
+  <th>Standard Jekyll (Ruby)</th>
+  <th>Astro (Node.js/Vite)</th>
+  <th>Cluster-Jekyll (Compiled C++)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Build Time</strong></td>
+  <td>~28 minutes (or VM crash)</td>
+  <td>~4.5 minutes (270s)</td>
+  <td><strong>18.4 seconds</strong></td>
+</tr>
+<tr>
+  <td><strong>Throughput</strong></td>
+  <td>~60 pages/sec</td>
+  <td>~370 pages/sec</td>
+  <td><strong>5,430 pages/sec</strong></td>
+</tr>
+<tr>
+  <td><strong>Memory Footprint</strong></td>
+  <td>>3.2 GB RAM (GC heavy)</td>
+  <td>~1.8 GB RAM</td>
+  <td><strong>124 MB RAM</strong></td>
+</tr>
+<tr>
+  <td><strong>Binary Output</strong></td>
+  <td>No (interprets on Ruby)</td>
+  <td>No (JS Bundle/Node)</td>
+  <td><strong>Yes (Single executable binary)</strong></td>
+</tr>
+</tbody>
+</table>
 <h3 id="why-is-cluster-jekyll-so-much-faster">Why is Cluster-Jekyll so much faster?</h3>
 <p>1. <strong>Compilation vs. Interpretation:</strong> Standard generators parse layouts and variables dynamically using JavaScript (Astro) or Ruby (Jekyll) runtimes on every single page. Cluster transpiles the Liquid structure once into highly optimized native C++ layout code.</p>
 <p>2. <strong>Zero-Allocation Stream Parsing:</strong> The compiler bridge processes Markdown frontmatter via direct string views and memory-mapped buffers, eliminating JSON parsing overhead.</p>
@@ -130,13 +160,48 @@ fn start_jekyll_server():
 </ul>
 <hr />
 <h2 id="6--benefits-over-popular-site-generators">6. Benefits over Popular Site Generators</h2>
-<p>| Feature | Standard Jekyll | Astro / Next.js | Cluster-Jekyll |</p>
-<p>| :--- | :--- | :--- | :--- |</p>
-<p>| <strong>VM/Runtime Required</strong> | Ruby VM | Node.js Runtime | <strong>None (Compiled C++ Native)</strong> |</p>
-<p>| <strong>Deployment Artifact</strong> | Hundreds of files | Complex JS server/static | <strong>Single 1MB binary containing server & site</strong> |</p>
-<p>| <strong>Local Startup Time</strong> | ~10.5 seconds | ~4.2 seconds | <strong>Instant (2 milliseconds)</strong> |</p>
-<p>| <strong>Hybrid Mode</strong> | Static Only (No API) | Complex Node SSR | <strong>Dynamic SSR & native SQLite APIs out-of-the-box</strong> |</p>
-<p>| <strong>AI Integration</strong> | Third-party plugins | Custom API calls | <strong>Built-in <code>ai_ask</code> runtime hydration</strong> |</p>
+<table>
+<thead>
+<tr>
+  <th>Feature</th>
+  <th>Standard Jekyll</th>
+  <th>Astro / Next.js</th>
+  <th>Cluster-Jekyll</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>VM/Runtime Required</strong></td>
+  <td>Ruby VM</td>
+  <td>Node.js Runtime</td>
+  <td><strong>None (Compiled C++ Native)</strong></td>
+</tr>
+<tr>
+  <td><strong>Deployment Artifact</strong></td>
+  <td>Hundreds of files</td>
+  <td>Complex JS server/static</td>
+  <td><strong>Single 1MB binary containing server & site</strong></td>
+</tr>
+<tr>
+  <td><strong>Local Startup Time</strong></td>
+  <td>~10.5 seconds</td>
+  <td>~4.2 seconds</td>
+  <td><strong>Instant (2 milliseconds)</strong></td>
+</tr>
+<tr>
+  <td><strong>Hybrid Mode</strong></td>
+  <td>Static Only (No API)</td>
+  <td>Complex Node SSR</td>
+  <td><strong>Dynamic SSR & native SQLite APIs out-of-the-box</strong></td>
+</tr>
+<tr>
+  <td><strong>AI Integration</strong></td>
+  <td>Third-party plugins</td>
+  <td>Custom API calls</td>
+  <td><strong>Built-in <code>ai_ask</code> runtime hydration</strong></td>
+</tr>
+</tbody>
+</table>
 <hr />
 <h3 id="chapter-navigation">Chapter Navigation</h3>
 <ul>
@@ -150,6 +215,11 @@ fn start_jekyll_server():
     <span>[Interactive Island: Counter]</span>
   </div>
 </cluster-island>
+
+<div class="chapter-nav">
+  <a href="/chapter15.html">&larr; Chapter 15</a>
+  <a href="/chapter17.html">Chapter 17 &rarr;</a>
+</div>
 
         </article>
     </main>

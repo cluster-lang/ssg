@@ -1,19 +1,13 @@
 CLD/1.0
 META|The Cluster Book — Official Language Guide|Cluster-lang Team|2026-11-15|default|cluster,systems,compiler,book|the-cluster-book--official-language-guide|Learn Cluster-lang from the ground up. A high-performance systems language with Pythonic readability and C++ execution speed.
-BLOCKS_COUNT|143
-BLOCK|raw_html||<div class="hero-section">
-BLOCK|raw_html||  <h1>The Cluster Book 📖</h1>
-BLOCK|p||<p>The official documentation and language guide for <strong>Cluster-lang</strong> — a high-performance systems language with Pythonic readability, C++ execution speed, and compile-time memory safety.</p>
-BLOCK|raw_html||  <div style="margin: 20px 0;">
+BLOCKS_COUNT|137
+BLOCK|raw_html||<h1>The Cluster Book</h1>
+BLOCK|raw_html||<p>The official documentation and language guide for <strong>Cluster-lang</strong> — a high-performance systems language with Pythonic readability, C++ execution speed, and compile-time memory safety.</p>
+BLOCK|raw_html||<div style="margin: 20px 0 30px 0; display: flex; gap: 12px; align-items: center;">
 BLOCK|island|idle||ThemeToggle
-BLOCK|raw_html||  </div>
 BLOCK|raw_html||</div>
 BLOCK|raw_html||<hr>
 BLOCK|raw_html||<h2>All 32 Official Chapters</h2>
-BLOCK|raw_html||<h1>The Cluster Book</h1>
-BLOCK|p||<p>The official documentation and language guide for <strong>Cluster-lang</strong> — a high-performance systems language with Pythonic readability, C++ execution speed, and compile-time memory safety.</p>
-BLOCK|raw_html||<hr>
-BLOCK|raw_html||<h2>Chapters</h2>
 BLOCK|raw_html||<div class="chapter-grid">
 BLOCK|raw_html||    <a class="chapter-card" href="/chapter1.html">
 BLOCK|raw_html||        <div class="card-num">Chapter 1</div>

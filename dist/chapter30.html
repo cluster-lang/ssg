@@ -15,8 +15,8 @@
     <div class="sidebar-backdrop"></div>
     <nav class="sidebar">
     <div class="sidebar-header">
-        <h1><a href="/index.html" style="color:#fff;text-decoration:none;">The Cluster Book</a></h1>
-        <p>Official Language Guide &middot; <strong>Cluster-SSG</strong></p>
+        <h1><a href="/index.html">The Cluster Book</a></h1>
+        <p>Official Language Guide</p>
     </div>
     <ul class="sidebar-nav">
         <li><a href="/index.html">Home</a></li>
@@ -69,7 +69,7 @@
 <hr />
 <h2 id="1--direct-header-ingestion-with-c-include">1. Direct Header Ingestion with <code>c_include</code></h2>
 <p>To use standard C functions, simply include the header at the top of your Cluster source file:</p>
-<pre><code class="language-python">c_include "math.h"
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">c_include "math.h"
 c_include "stdio.h"
 
 fn main():
@@ -79,23 +79,23 @@ fn main():
     put "Square root of 16.0 is: " + to_text(s)
     
     val := cos(0.0)
-    put "Cos(0.0) is: " + to_text(val)</code></pre>
+    put "Cos(0.0) is: " + to_text(val)</code></pre></div></div>
 <p>The compiler automatically imports function prototypes, return types, and parameter signatures for headers like <code>math.h</code>, <code>stdio.h</code>, <code>stdlib.h</code>, <code>string.h</code>, <code>time.h</code>, and <code>unistd.h</code>.</p>
 <hr />
 <h2 id="2--dynamic-library-linking-link">2. Dynamic Library Linking (<code>link</code>)</h2>
 <p>When your code depends on external C libraries (such as <code>libm</code>, <code>libcrypto</code>, <code>libcurl</code>, or <code>libsqlite3</code>), use the <code>link</code> directive:</p>
-<pre><code class="language-python"># Instructs the linker to link libm (-lm)
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python"># Instructs the linker to link libm (-lm)
 link "m"
 
 # Instructs the linker to link libssl (-lssl)
-link "ssl"</code></pre>
+link "ssl"</code></pre></div></div>
 <p>You can also pass library names and library search paths directly from the CLI:</p>
-<pre><code class="language-bash">./cl run -lm -L/usr/local/lib main.cl</code></pre>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-bash">./cl run -lm -L/usr/local/lib main.cl</code></pre></div></div>
 <p>The Cluster compiler automatically injects <code>-Wl,-rpath</code> flags to ensure your compiled binaries locate shared libraries at runtime without manual <code>LD_LIBRARY_PATH</code> configuration.</p>
 <hr />
 <h2 id="3--external-function-declarations-extern-fn">3. External Function Declarations (<code>extern fn</code>)</h2>
 <p>For custom third-party C/C++ libraries that do not have automated header mappings, you can declare external functions using the <code>extern fn</code> syntax:</p>
-<pre><code class="language-python">link "m"
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">link "m"
 
 # Declare external C signatures
 extern fn hypot(x: float, y: float) -> float
@@ -106,7 +106,7 @@ fn main():
     put "Hypotenuse (3, 4) = " + to_text(h)    # 5.000000
 
     p := pow(2.0, 10.0)
-    put "2^10 = " + to_text(p)                 # 1024.000000</code></pre>
+    put "2^10 = " + to_text(p)                 # 1024.000000</code></pre></div></div>
 <hr />
 <h2 id="4--native-64-bit-float-lowering">4. Native 64-bit Float Lowering</h2>
 <p>Cluster-lang features full native LLVM <code>double</code> lowering for IEEE 754 64-bit floating point numbers:</p>
@@ -115,7 +115,7 @@ fn main():
   <li><strong>Float Comparisons</strong>: Evaluated via IEEE compliant ordered comparison (<code>fcmp oeq</code>, <code>fcmp one</code>, <code>fcmp olt</code>, <code>fcmp ogt</code>).</li>
   <li><strong>Automatic Int-to-Float Promotion</strong>: Passing integer values where floats are expected automatically inserts zero-cost <code>sitofp</code> conversions.</li>
 </ul>
-<pre><code class="language-python">fn main():
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">fn main():
     a := 3.14159
     b := 2.71828
 
@@ -127,7 +127,7 @@ fn main():
     put sum
     put diff
     put prod
-    put div</code></pre>
+    put div</code></pre></div></div>
 <hr />
 <h3 id="chapter-navigation">Chapter Navigation</h3>
 <ul>
@@ -141,6 +141,11 @@ fn main():
     <span>[Interactive Island: Counter]</span>
   </div>
 </cluster-island>
+
+<div class="chapter-nav">
+  <a href="/chapter29.html">&larr; Chapter 29</a>
+  <a href="/chapter31.html">Chapter 31 &rarr;</a>
+</div>
 
         </article>
     </main>

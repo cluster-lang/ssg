@@ -15,8 +15,8 @@
     <div class="sidebar-backdrop"></div>
     <nav class="sidebar">
     <div class="sidebar-header">
-        <h1><a href="/index.html" style="color:#fff;text-decoration:none;">The Cluster Book</a></h1>
-        <p>Official Language Guide &middot; <strong>Cluster-SSG</strong></p>
+        <h1><a href="/index.html">The Cluster Book</a></h1>
+        <p>Official Language Guide</p>
     </div>
     <ul class="sidebar-nav">
         <li><a href="/index.html">Home</a></li>
@@ -64,39 +64,39 @@
 <p>For high-throughput, non-blocking I/O tasks, Cluster-lang provides async coroutines.</p>
 <h3 id="defining-async-functions">Defining Async Functions</h3>
 <p>Define an async function by prefixing it with the <code>async</code> keyword:</p>
-<pre><code class="language-python">async fn fetch_data(url: string) -> string:
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">async fn fetch_data(url: string) -> string:
     // Simulated network I/O
     delay(100)
-    return "Data from " + url</code></pre>
+    return "Data from " + url</code></pre></div></div>
 <h3 id="awaiting-async-functions">Awaiting Async Functions</h3>
 <p>To suspend execution until an async task finishes, use the <code>await</code> keyword:</p>
-<pre><code class="language-python">fn main():
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">fn main():
     task := fetch_data("https://api.example.com")
     result := await task
-    put result</code></pre>
+    put result</code></pre></div></div>
 <p>Under the hood, async operations are transpiled to cooperative C++ futures and coroutines using modern C++20 <code>std::coroutine</code>.</p>
 <hr />
 <h2 id="2--metaprogramming--decorators">2. Metaprogramming & Decorators</h2>
 <p>Decorators allow you to modify or monitor the behavior of functions and models at compile-time or runtime.</p>
 <h3 id="using-decorators">Using Decorators</h3>
 <p>Decorators are prefixed with the <code>@</code> symbol and placed directly above function declarations:</p>
-<pre><code class="language-python">@log_execution
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">@log_execution
 fn process(data: int) -> int:
-    return data * 2</code></pre>
+    return data * 2</code></pre></div></div>
 <h3 id="property-descriptors">Property Descriptors</h3>
 <p>You can use decorators to attach properties, getters, or setters to model fields:</p>
-<pre><code class="language-python">model Product:
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">model Product:
     @readonly
     id: int
     
     @property
-    price: float</code></pre>
+    price: float</code></pre></div></div>
 <hr />
 <h2 id="3--reflection--introspection">3. Reflection & Introspection</h2>
 <p>Cluster-lang provides metadata introspection capabilities so program structures can query their own attributes at runtime.</p>
 <h3 id="inspecting-models">Inspecting Models</h3>
 <p>You can retrieve the name, fields, and types of fields on any model instance:</p>
-<pre><code class="language-python">model User:
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">model User:
     name: string
     age: int
 
@@ -105,7 +105,7 @@ fn main():
     
     // Introspection query
     put u.__name__            // Prints "User"
-    put u.__fields__          // Prints ["name", "age"]</code></pre>
+    put u.__fields__          // Prints ["name", "age"]</code></pre></div></div>
 <p>This is extremely useful for building automatic JSON serializers/deserializers, database ORMs, and loggers.</p>
 <hr />
 <h3 id="chapter-navigation">Chapter Navigation</h3>
@@ -120,6 +120,11 @@ fn main():
     <span>[Interactive Island: Counter]</span>
   </div>
 </cluster-island>
+
+<div class="chapter-nav">
+  <a href="/chapter5.html">&larr; Chapter 5</a>
+  <a href="/chapter7.html">Chapter 7 &rarr;</a>
+</div>
 
         </article>
     </main>

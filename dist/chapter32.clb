@@ -1,6 +1,6 @@
 CLD/1.0
 META|Chapter 32: Zero-Training AI Model Weight Surgery (SafeTensors & GGUF)|Cluster-lang Team|2026-11-15|chapter|cluster,systems,guide|chapter-32-zero-training-ai-model-weight-surgery-safetensors--gguf|
-BLOCKS_COUNT|48
+BLOCKS_COUNT|42
 BLOCK|h1|1|Chapter 32: Zero-Training AI Model Weight Surgery (SafeTensors & GGUF)
 BLOCK|p||Traditional machine learning workflows require immense computational power, hundreds of gigabytes of VRAM, and days of GPU cluster training just to align or specialize small AI models.
 BLOCK|p||Cluster-lang introduces a revolutionary paradigm: **Zero-Training AI Model Weight Surgery**. By directly decompiling model files, developers can analyze parameter manifolds, compare small student models against large teacher models, and transplant or blend weights directly on disk with **zero heavy training and minimal RAM**.
@@ -26,13 +26,13 @@ fn main():
 BLOCK|hr||
 BLOCK|h2|2|2. Weight Precision & Quantization Formats
 BLOCK|p||Cluster-lang inspects parameter precisions down to the bit level:
-BLOCK|p||| Format Code | Precision | Description |
-BLOCK|p|||:---|:---|:---|
-BLOCK|p||| `DTYPE_F32` | 32-bit Float | Standard single-precision IEEE 754 weights |
-BLOCK|p||| `DTYPE_F16` | 16-bit Float | Half-precision GPU tensor cores format |
-BLOCK|p||| `DTYPE_BF16` | 16-bit Brain Float | Google Brain dynamic range format |
-BLOCK|p||| `DTYPE_Q4_0` | 4-bit Quantized | High-efficiency 4-bit block-quantized weights |
-BLOCK|p||| `DTYPE_Q8_0` | 8-bit Quantized | Balanced 8-bit quantized weights |
+BLOCK|table||| Format Code | Precision | Description |
+|:---|:---|:---|
+| `DTYPE_F32` | 32-bit Float | Standard single-precision IEEE 754 weights |
+| `DTYPE_F16` | 16-bit Float | Half-precision GPU tensor cores format |
+| `DTYPE_BF16` | 16-bit Brain Float | Google Brain dynamic range format |
+| `DTYPE_Q4_0` | 4-bit Quantized | High-efficiency 4-bit block-quantized weights |
+| `DTYPE_Q8_0` | 8-bit Quantized | Balanced 8-bit quantized weights |
 BLOCK|hr||
 BLOCK|h2|2|3. Parameter Manifold Comparison
 BLOCK|p||Before modifying a smaller model, developers can measure semantic alignment and layer drift against a larger, more capable model using vector cosine similarity:

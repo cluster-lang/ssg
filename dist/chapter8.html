@@ -15,8 +15,8 @@
     <div class="sidebar-backdrop"></div>
     <nav class="sidebar">
     <div class="sidebar-header">
-        <h1><a href="/index.html" style="color:#fff;text-decoration:none;">The Cluster Book</a></h1>
-        <p>Official Language Guide &middot; <strong>Cluster-SSG</strong></p>
+        <h1><a href="/index.html">The Cluster Book</a></h1>
+        <p>Official Language Guide</p>
     </div>
     <ul class="sidebar-nav">
         <li><a href="/index.html">Home</a></li>
@@ -64,11 +64,11 @@
 <p>Cluster-lang provides built-in, highly optimized multidimensional arrays (<code>Tensor</code>) designed for AI pipelines, machine learning, and high-performance scientific simulations.</p>
 <h3 id="creating-tensors">Creating Tensors</h3>
 <p>Declare a tensor by specifying its shape and dimensions:</p>
-<pre><code class="language-python">// Creates a 2x3 tensor initialized to 0.0
-t1 := Tensor(shape=[2, 3])</code></pre>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">// Creates a 2x3 tensor initialized to 0.0
+t1 := Tensor(shape=[2, 3])</code></pre></div></div>
 <h3 id="basic-math-operations">Basic Math Operations</h3>
 <p>Tensors support fast matrix addition, scalar multiplication, and dot products:</p>
-<pre><code class="language-python">t1 := Tensor(shape=[2, 2])
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">t1 := Tensor(shape=[2, 2])
 t1.set(row=0, col=0, val=1.0)
 t1.set(row=0, col=1, val=2.0)
 
@@ -77,7 +77,7 @@ t2.set(row=0, col=0, val=3.0)
 t2.set(row=0, col=1, val=4.0)
 
 // Fast matrix multiplication (dot product)
-t3 := t1.matmul(t2)</code></pre>
+t3 := t1.matmul(t2)</code></pre></div></div>
 <hr />
 <h2 id="2--embedded-systems--hardware-controls">2. Embedded Systems & Hardware Controls</h2>
 <p>Cluster-lang compiles directly to native machine code without virtual machines or heavy runtime baggage, making it exceptionally suited for microcontrollers (Arduino, STM32, ESP32) and single-board computers (Raspberry Pi).</p>
@@ -88,7 +88,7 @@ t3 := t1.matmul(t2)</code></pre>
   <li><code>digitalWrite(pin, state)</code>: Writes <code>0</code> (LOW) or <code>1</code> (HIGH) to a pin.</li>
   <li><code>delay(ms)</code>: Pauses execution for a specified duration in milliseconds.</li>
 </ul>
-<pre><code class="language-python">fn main():
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">fn main():
     put "Initializing LED Pin..."
     pinMode(18, 1)            // Set GPIO Pin 18 to OUTPUT mode
     
@@ -96,7 +96,7 @@ t3 := t1.matmul(t2)</code></pre>
         digitalWrite(18, 1)   // LED ON
         delay(500)            // Wait 500ms
         digitalWrite(18, 0)   // LED OFF
-        delay(500)            // Wait 500ms</code></pre>
+        delay(500)            // Wait 500ms</code></pre></div></div>
 <p>When compiling for microcontrollers (using <code>--target esp32</code> or <code>--target arduino</code>), the compiler automatically bundles the required hardware cross-compilation header libraries.</p>
 <hr />
 <h3 id="chapter-navigation">Chapter Navigation</h3>
@@ -111,6 +111,11 @@ t3 := t1.matmul(t2)</code></pre>
     <span>[Interactive Island: Counter]</span>
   </div>
 </cluster-island>
+
+<div class="chapter-nav">
+  <a href="/chapter7.html">&larr; Chapter 7</a>
+  <a href="/chapter9.html">Chapter 9 &rarr;</a>
+</div>
 
         </article>
     </main>

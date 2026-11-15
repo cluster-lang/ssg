@@ -15,8 +15,8 @@
     <div class="sidebar-backdrop"></div>
     <nav class="sidebar">
     <div class="sidebar-header">
-        <h1><a href="/index.html" style="color:#fff;text-decoration:none;">The Cluster Book</a></h1>
-        <p>Official Language Guide &middot; <strong>Cluster-SSG</strong></p>
+        <h1><a href="/index.html">The Cluster Book</a></h1>
+        <p>Official Language Guide</p>
     </div>
     <ul class="sidebar-nav">
         <li><a href="/index.html">Home</a></li>
@@ -63,16 +63,37 @@
 <hr />
 <h2 id="1--ownership--reference-qualifiers">1. Ownership & Reference Qualifiers</h2>
 <p>Cluster-lang defines three key type qualifiers for memory safety:</p>
-<p>| Qualifier | C++ Mapping | Semantics |</p>
-<p>| :--- | :--- | :--- |</p>
-<p>| <code>owned T</code> | <code>T</code> | The variable has exclusive ownership of the resource. Moving it invalidates the original variable. |</p>
-<p>| <code>borrow T</code> | <code>const T&</code> | Read-only borrow. Accesses the resource via a const reference. |</p>
-<p>| <code>mut borrow T</code> | <code>T&</code> | Mutable borrow. Allows in-place mutation of the resource. |</p>
+<table>
+<thead>
+<tr>
+  <th>Qualifier</th>
+  <th>C++ Mapping</th>
+  <th>Semantics</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>owned T</code></td>
+  <td><code>T</code></td>
+  <td>The variable has exclusive ownership of the resource. Moving it invalidates the original variable.</td>
+</tr>
+<tr>
+  <td><code>borrow T</code></td>
+  <td><code>const T&</code></td>
+  <td>Read-only borrow. Accesses the resource via a const reference.</td>
+</tr>
+<tr>
+  <td><code>mut borrow T</code></td>
+  <td><code>T&</code></td>
+  <td>Mutable borrow. Allows in-place mutation of the resource.</td>
+</tr>
+</tbody>
+</table>
 <p>If no qualifier is specified, the type defaults to standard copy-on-assignment/pass-by-value semantics.</p>
 <hr />
 <h2 id="2--compile-time-move-semantics">2. Compile-Time Move Semantics</h2>
 <p>When a variable is declared as <code>owned</code>, assigning it to another variable or passing it as a function argument transfers (moves) its ownership:</p>
-<pre><code class="language-python">model Data:
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">model Data:
     val: int
 
 fn consume(d: owned Data):
@@ -80,13 +101,13 @@ fn consume(d: owned Data):
 
 fn main():
     x: owned Data = Data(val=42)
-    consume(x) // Ownership of x is moved to the consume function.</code></pre>
+    consume(x) // Ownership of x is moved to the consume function.</code></pre></div></div>
 <h3 id="static-use-after-move-protection">Static Use-After-Move Protection</h3>
 <p>The compiler's static analysis engine tracks ownership states. Attempting to read, assign, or borrow a variable after its ownership has been moved triggers a compile-time linter error:</p>
-<pre><code class="language-python">fn main():
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">fn main():
     x: owned Data = Data(val=42)
     consume(x)
-    consume(x) // Compile-time Error: Use of moved value: x</code></pre>
+    consume(x) // Compile-time Error: Use of moved value: x</code></pre></div></div>
 <p>Under the hood, the transpiler converts compile-time moves of <code>owned</code> resources into C++ <code>std::move()</code> operations, ensuring zero-overhead move semantics at runtime.</p>
 <hr />
 <h2 id="3--borrowing-rules-shared-vs--mutable">3. Borrowing Rules (Shared vs. Mutable)</h2>
@@ -95,28 +116,28 @@ fn main():
   <li><strong>Many Immutable Borrows:</strong> You can have multiple active <code>borrow</code> references to a resource at the same time.</li>
   <li><strong>One Mutable Borrow:</strong> If a resource is borrowed via <code>mut borrow</code>, no other active borrows (shared or mutable) are allowed.</li>
 </ul>
-<pre><code class="language-python">fn inspect(d: borrow Data):
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">fn inspect(d: borrow Data):
     put d.val
 
 fn main():
     x: owned Data = Data(val=10)
     inspect(x) // Valid read-only borrow
-    consume(x) // Valid move</code></pre>
+    consume(x) // Valid move</code></pre></div></div>
 <hr />
 <h2 id="4--unsafe-safety-bypass-unsafe">4. Unsafe Safety Bypass (<code>unsafe:</code>)</h2>
 <p>In performance-critical systems or low-level driver development, you may need to bypass the strict compile-time borrow checker to execute raw pointers, manual copies, or multiple mutable references.</p>
 <p>Wrapping the code in an <code>unsafe:</code> block disables the ownership linter checks within that scope, while keeping the rest of the application safe:</p>
-<pre><code class="language-python">fn main():
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">fn main():
     x: owned Data = Data(val=100)
     
     unsafe:
         // These statements are allowed inside unsafe block
         consume(x)
-        consume(x) // Bypassed use-after-move checker!</code></pre>
+        consume(x) // Bypassed use-after-move checker!</code></pre></div></div>
 <hr />
 <h2 id="5--complete-example-hybrid-memory-model">5. Complete Example: Hybrid Memory Model</h2>
 <p>This complete program demonstrates how standard copy semantics and strict ownership rules seamlessly live side-by-side in the same codebase:</p>
-<pre><code class="language-python">model Window:
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">model Window:
     title: string
 
 # 1. Takes ownership of the window
@@ -137,7 +158,7 @@ fn main():
     w2: Window = Window(title="Copy Frame")
     w3 := w2 // Copies the window data (standard C++)
     render_window(w2) // w2 is still valid!
-    render_window(w3) // w3 is also valid!</code></pre>
+    render_window(w3) // w3 is also valid!</code></pre></div></div>
 <hr />
 <h3 id="chapter-navigation">Chapter Navigation</h3>
 <ul>
@@ -151,6 +172,11 @@ fn main():
     <span>[Interactive Island: Counter]</span>
   </div>
 </cluster-island>
+
+<div class="chapter-nav">
+  <a href="/chapter17.html">&larr; Chapter 17</a>
+  <a href="/chapter19.html">Chapter 19 &rarr;</a>
+</div>
 
         </article>
     </main>

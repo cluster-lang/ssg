@@ -15,8 +15,8 @@
     <div class="sidebar-backdrop"></div>
     <nav class="sidebar">
     <div class="sidebar-header">
-        <h1><a href="/index.html" style="color:#fff;text-decoration:none;">The Cluster Book</a></h1>
-        <p>Official Language Guide &middot; <strong>Cluster-SSG</strong></p>
+        <h1><a href="/index.html">The Cluster Book</a></h1>
+        <p>Official Language Guide</p>
     </div>
     <ul class="sidebar-nav">
         <li><a href="/index.html">Home</a></li>
@@ -62,14 +62,14 @@
 <hr />
 <h2 id="1--non-nullability-by-default">1. Non-Nullability by Default</h2>
 <p>In Cluster-lang, variables are non-nullable by default. They must be initialized with a value and cannot be assigned <code>None</code> or <code>nullptr</code>:</p>
-<pre><code class="language-python">name: string = "Alice"      // Valid
-name = None                 // Compile-time Type Mismatch Error!</code></pre>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">name: string = "Alice"      // Valid
+name = None                 // Compile-time Type Mismatch Error!</code></pre></div></div>
 <hr />
 <h2 id="2--optional-types-">2. Optional Types (<code>?</code>)</h2>
 <p>If you want a variable to be nullable, append a <code>?</code> suffix to its type. Optional variables can be initialized or assigned <code>None</code>:</p>
-<pre><code class="language-python">email: string? := None      // Valid optional string
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">email: string? := None      // Valid optional string
 email = "alice@example.com" // Assign a value
-email = None                // Can be set back to None</code></pre>
+email = None                // Can be set back to None</code></pre></div></div>
 <p>Optional variables can be unwrapped using optional chaining (<code>?.</code>) or fallback using null coalescing (<code>??</code>).</p>
 <hr />
 <h2 id="3--box-pointers-boxt">3. Box Pointers (<code>box[T]</code>)</h2>
@@ -78,17 +78,17 @@ email = None                // Can be set back to None</code></pre>
   <li>Only <strong>one</strong> variable can own a box pointer at a time.</li>
   <li>When the owner goes out of scope, the heap resource is automatically deleted (zero memory leaks).</li>
 </ul>
-<pre><code class="language-python">x := box 42                 // Heap-allocated unique integer box</code></pre>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">x := box 42                 // Heap-allocated unique integer box</code></pre></div></div>
 <hr />
 <h2 id="4--ownership-transfer--move-semantics-move">4. Ownership Transfer & Move Semantics (<code>move()</code>)</h2>
 <p>To transfer ownership of a resource (like a <code>box[T]</code> pointer or other custom resource), you must explicitly use the <code>move()</code> function:</p>
-<pre><code class="language-python">val1 := box 100
-val2 := move(val1)          // Ownership transferred to val2</code></pre>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">val1 := box 100
+val2 := move(val1)          // Ownership transferred to val2</code></pre></div></div>
 <h3 id="compile-time-use-after-move-protection">Compile-Time Use-After-Move Protection</h3>
 <p>If you try to access a variable after its ownership has been transferred, the Cluster compiler throws a compile-time safety error:</p>
-<pre><code class="language-python">val1 := box 100
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">val1 := box 100
 val2 := move(val1)
-put *val1                  // Compile Error: Use of moved variable 'val1'</code></pre>
+put *val1                  // Compile Error: Use of moved variable 'val1'</code></pre></div></div>
 <p>This guarantees memory safety and prevents double-free errors.</p>
 <hr />
 <h3 id="chapter-navigation">Chapter Navigation</h3>
@@ -103,6 +103,11 @@ put *val1                  // Compile Error: Use of moved variable 'val1'</code>
     <span>[Interactive Island: Counter]</span>
   </div>
 </cluster-island>
+
+<div class="chapter-nav">
+  <a href="/chapter3.html">&larr; Chapter 3</a>
+  <a href="/chapter5.html">Chapter 5 &rarr;</a>
+</div>
 
         </article>
     </main>

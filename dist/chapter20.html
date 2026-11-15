@@ -15,8 +15,8 @@
     <div class="sidebar-backdrop"></div>
     <nav class="sidebar">
     <div class="sidebar-header">
-        <h1><a href="/index.html" style="color:#fff;text-decoration:none;">The Cluster Book</a></h1>
-        <p>Official Language Guide &middot; <strong>Cluster-SSG</strong></p>
+        <h1><a href="/index.html">The Cluster Book</a></h1>
+        <p>Official Language Guide</p>
     </div>
     <ul class="sidebar-nav">
         <li><a href="/index.html">Home</a></li>
@@ -66,21 +66,21 @@
 <hr />
 <h2 id="2--single-line-assembly">2. Single-Line Assembly</h2>
 <p>For simple operations like CPU hints, memory barriers, or quick register tweaks, Cluster provides a clean, single-line <code>asm</code> statement.</p>
-<pre><code class="language-python">fn wait_for_interrupt():
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">fn wait_for_interrupt():
     // Halts execution until an interrupt occurs (x86)
     asm "hlt"
     
     // A simple no-operation
-    asm "nop"</code></pre>
+    asm "nop"</code></pre></div></div>
 <p>Under the hood, these transpile directly into <code>__asm__ volatile ("nop");</code> in the generated C++, guaranteeing that the compiler won't optimize them away or reorder them unsafely.</p>
 <hr />
 <h2 id="3--multi-line-assembly-blocks">3. Multi-Line Assembly Blocks</h2>
 <p>For more complex routines, such as custom calling conventions or tightly unrolled loops, Cluster supports multi-line assembly blocks using the <code>asm:</code> keyword with indented instructions.</p>
-<pre><code class="language-python">fn fast_clear_eax():
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">fn fast_clear_eax():
     asm:
         "xor %%eax, %%eax"
         "nop"
-        "nop"</code></pre>
+        "nop"</code></pre></div></div>
 <p>The indentation keeps your assembly organized and visually consistent with Cluster's Pythonic syntax rules, while remaining deeply tied to the C++ backend. Each indented string represents an instruction line.</p>
 <hr />
 <h2 id="4--automatic-simd-header-inclusion">4. Automatic SIMD Header Inclusion</h2>
@@ -89,13 +89,13 @@
 <hr />
 <h2 id="5--using-simd-intrinsics-via-cpp-inject">5. Using SIMD Intrinsics via cpp_inject</h2>
 <p>To leverage SIMD intrinsics directly within your Cluster code, you can use the <code>cpp_inject</code> feature. This allows you to embed raw C/C++ intrinsic calls directly into your vectorized functions, keeping your computation logic grouped together.</p>
-<pre><code class="language-python">fn add_vectors(a: f32*, b: f32*, result: f32*):
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">fn add_vectors(a: f32*, b: f32*, result: f32*):
     // Example using x86 AVX intrinsics (256-bit vectors)
     cpp_inject:
         "__m256 va = _mm256_loadu_ps(a);"
         "__m256 vb = _mm256_loadu_ps(b);"
         "__m256 vr = _mm256_add_ps(va, vb);"
-        "_mm256_storeu_ps(result, vr);"</code></pre>
+        "_mm256_storeu_ps(result, vr);"</code></pre></div></div>
 <p>This blends seamlessly with Cluster's memory pointers, providing a direct pipeline to hardware vector units without external library dependencies.</p>
 <hr />
 <h2 id="6--how-cluster-transpiles-assembly">6. How Cluster Transpiles Assembly</h2>
@@ -104,7 +104,7 @@
 <hr />
 <h2 id="7--complete-working-example">7. Complete Working Example</h2>
 <p>Here is a complete example demonstrating both single-line and multi-line inline assembly working cleanly in Cluster:</p>
-<pre><code class="language-python">fn main():
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">fn main():
     // Single instruction
     asm "nop"
     
@@ -113,7 +113,7 @@
         "xor %%eax, %%eax"
         "nop"
     
-    put "Assembly executed successfully"</code></pre>
+    put "Assembly executed successfully"</code></pre></div></div>
 <p>Cluster's combination of Pythonic readability and bare-metal power means you no longer have to choose between writing maintainable code and writing blazingly fast code.</p>
 <hr />
 <h3 id="chapter-navigation">Chapter Navigation</h3>
@@ -128,6 +128,11 @@
     <span>[Interactive Island: Counter]</span>
   </div>
 </cluster-island>
+
+<div class="chapter-nav">
+  <a href="/chapter19.html">&larr; Chapter 19</a>
+  <a href="/chapter21.html">Chapter 21 &rarr;</a>
+</div>
 
         </article>
     </main>

@@ -15,8 +15,8 @@
     <div class="sidebar-backdrop"></div>
     <nav class="sidebar">
     <div class="sidebar-header">
-        <h1><a href="/index.html" style="color:#fff;text-decoration:none;">The Cluster Book</a></h1>
-        <p>Official Language Guide &middot; <strong>Cluster-SSG</strong></p>
+        <h1><a href="/index.html">The Cluster Book</a></h1>
+        <p>Official Language Guide</p>
     </div>
     <ul class="sidebar-nav">
         <li><a href="/index.html">Home</a></li>
@@ -63,30 +63,30 @@
 <h2 id="1--spawning-green-threads-spawn">1. Spawning Green Threads (<code>spawn</code>)</h2>
 <p>Green threads (lightweight fibers) are spawned using the <code>spawn</code> keyword. They run asynchronously on the compiler's worker thread pool.</p>
 <h3 id="spawning-a-function">Spawning a Function</h3>
-<pre><code class="language-python">fn calculate(id: int):
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">fn calculate(id: int):
     put "Task started:"
     put id
 
 fn main():
     spawn calculate(1)      // Run calculate(1) asynchronously
-    spawn calculate(2)      // Run calculate(2) asynchronously</code></pre>
+    spawn calculate(2)      // Run calculate(2) asynchronously</code></pre></div></div>
 <h3 id="spawning-a-block-of-code">Spawning a Block of Code</h3>
 <p>You can also spawn an inline block of code using <code>spawn:</code> statement:</p>
-<pre><code class="language-python">fn main():
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">fn main():
     spawn:
-        put "Task runs in thread pool"</code></pre>
+        put "Task runs in thread pool"</code></pre></div></div>
 <hr />
 <h2 id="2--channels-channelt">2. Channels (<code>Channel[T]</code>)</h2>
 <p>Channels allow safe, synchronized data communication between different green threads without race conditions.</p>
 <h3 id="declaring-a-channel">Declaring a Channel</h3>
 <p>Declare a channel by specifying the generic type parameters and capacity:</p>
-<pre><code class="language-python">ch := Channel[int](10)      // Channel holding integers, capacity = 10</code></pre>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">ch := Channel[int](10)      // Channel holding integers, capacity = 10</code></pre></div></div>
 <h3 id="sending-and-receiving-data">Sending and Receiving Data</h3>
 <ul>
   <li><code>ch.send(value)</code>: Sends data into the channel (blocks if the channel capacity is full).</li>
   <li><code>ch.recv()</code>: Receives data from the channel (blocks if no data is available).</li>
 </ul>
-<pre><code class="language-python">fn worker(ch: Channel[int]):
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">fn worker(ch: Channel[int]):
     ch.send(42)            // Sends 42 into the channel
 
 fn main():
@@ -94,7 +94,7 @@ fn main():
     spawn worker(ch)
     
     val := ch.recv()       // Blocks until data is received
-    put val                // Prints 42</code></pre>
+    put val                // Prints 42</code></pre></div></div>
 <p>Channels are pass-by-value/copyable safe and reference-counted under the hood, making them safe to copy and pass to spawned lambdas.</p>
 <hr />
 <h3 id="chapter-navigation">Chapter Navigation</h3>
@@ -109,6 +109,11 @@ fn main():
     <span>[Interactive Island: Counter]</span>
   </div>
 </cluster-island>
+
+<div class="chapter-nav">
+  <a href="/chapter4.html">&larr; Chapter 4</a>
+  <a href="/chapter6.html">Chapter 6 &rarr;</a>
+</div>
 
         </article>
     </main>

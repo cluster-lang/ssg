@@ -15,8 +15,8 @@
     <div class="sidebar-backdrop"></div>
     <nav class="sidebar">
     <div class="sidebar-header">
-        <h1><a href="/index.html" style="color:#fff;text-decoration:none;">The Cluster Book</a></h1>
-        <p>Official Language Guide &middot; <strong>Cluster-SSG</strong></p>
+        <h1><a href="/index.html">The Cluster Book</a></h1>
+        <p>Official Language Guide</p>
     </div>
     <ul class="sidebar-nav">
         <li><a href="/index.html">Home</a></li>
@@ -73,38 +73,67 @@
   <li><strong>SafeTensors (<code>.safetensors</code>)</strong>: The Hugging Face safe zero-copy tensor storage format.</li>
   <li><strong>GGUF (<code>.gguf</code>)</strong>: The high-performance binary format optimized for llama.cpp, Ollama, and local CPU/GPU inference.</li>
 </ul>
-<pre><code class="language-python">import std::ai
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">import std::ai
 
 fn main():
     fmt_st := MODEL_FORMAT_SAFETENSORS
     fmt_gguf := MODEL_FORMAT_GGUF
 
     put "Format 1: " + model_format_name(fmt_st)    # SafeTensors (HuggingFace)
-    put "Format 2: " + model_format_name(fmt_gguf)  # GGUF (llama.cpp)</code></pre>
+    put "Format 2: " + model_format_name(fmt_gguf)  # GGUF (llama.cpp)</code></pre></div></div>
 <hr />
 <h2 id="2--weight-precision--quantization-formats">2. Weight Precision & Quantization Formats</h2>
 <p>Cluster-lang inspects parameter precisions down to the bit level:</p>
-<p>| Format Code | Precision | Description |</p>
-<p>|:---|:---|:---|</p>
-<p>| <code>DTYPE_F32</code> | 32-bit Float | Standard single-precision IEEE 754 weights |</p>
-<p>| <code>DTYPE_F16</code> | 16-bit Float | Half-precision GPU tensor cores format |</p>
-<p>| <code>DTYPE_BF16</code> | 16-bit Brain Float | Google Brain dynamic range format |</p>
-<p>| <code>DTYPE_Q4_0</code> | 4-bit Quantized | High-efficiency 4-bit block-quantized weights |</p>
-<p>| <code>DTYPE_Q8_0</code> | 8-bit Quantized | Balanced 8-bit quantized weights |</p>
+<table>
+<thead>
+<tr>
+  <th>Format Code</th>
+  <th>Precision</th>
+  <th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>DTYPE_F32</code></td>
+  <td>32-bit Float</td>
+  <td>Standard single-precision IEEE 754 weights</td>
+</tr>
+<tr>
+  <td><code>DTYPE_F16</code></td>
+  <td>16-bit Float</td>
+  <td>Half-precision GPU tensor cores format</td>
+</tr>
+<tr>
+  <td><code>DTYPE_BF16</code></td>
+  <td>16-bit Brain Float</td>
+  <td>Google Brain dynamic range format</td>
+</tr>
+<tr>
+  <td><code>DTYPE_Q4_0</code></td>
+  <td>4-bit Quantized</td>
+  <td>High-efficiency 4-bit block-quantized weights</td>
+</tr>
+<tr>
+  <td><code>DTYPE_Q8_0</code></td>
+  <td>8-bit Quantized</td>
+  <td>Balanced 8-bit quantized weights</td>
+</tr>
+</tbody>
+</table>
 <hr />
 <h2 id="3--parameter-manifold-comparison">3. Parameter Manifold Comparison</h2>
 <p>Before modifying a smaller model, developers can measure semantic alignment and layer drift against a larger, more capable model using vector cosine similarity:</p>
-<pre><code class="language-python">fn compare_model_layers(student_layer: vector[float], teacher_layer: vector[float]):
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">fn compare_model_layers(student_layer: vector[float], teacher_layer: vector[float]):
     similarity := cosine_similarity(student_layer, teacher_layer)
     put "Layer Cosine Similarity: " + to_text(similarity)
 
     if similarity < 0.85:
-        put "Layer has drifted significantly — target for surgery!"</code></pre>
+        put "Layer has drifted significantly — target for surgery!"</code></pre></div></div>
 <hr />
 <h2 id="4--zero-training-weight-surgery--linear-blending">4. Zero-Training Weight Surgery & Linear Blending</h2>
 <p>Rather than spending thousands of dollars training a model from scratch, you can perform direct <strong>weight blending</strong> between a teacher model and a student model:</p>
 <p>$$\theta_{\text{surged}} = (1 - \alpha) \cdot \theta_{\text{student}} + \alpha \cdot \theta_{\text{teacher}}$$</p>
-<pre><code class="language-python">fn perform_surgery():
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">fn perform_surgery():
     student_weights: vector[float] = [1.0, 2.0, 3.0, 4.0]
     teacher_weights: vector[float] = [3.0, 4.0, 5.0, 6.0]
 
@@ -116,7 +145,7 @@ fn main():
     i := 0
     while i < list_size(updated_weights):
         put to_text(updated_weights[i])    # 2.0, 3.0, 4.0, 5.0
-        i = i + 1</code></pre>
+        i = i + 1</code></pre></div></div>
 <p>By streaming updates directly with <code>file_seek</code> and <code>file_write_byte</code> (from Chapter 27), entire multi-gigabyte models can be updated in-place with <strong>less than 50MB of RAM</strong>.</p>
 <hr />
 <h2 id="5--conclusion-all-in-one-systems--ai-language">5. Conclusion: All-in-One Systems & AI Language</h2>
@@ -140,6 +169,11 @@ fn main():
     <span>[Interactive Island: Counter]</span>
   </div>
 </cluster-island>
+
+<div class="chapter-nav">
+  <a href="/chapter31.html">&larr; Chapter 31</a>
+  <span></span>
+</div>
 
         </article>
     </main>

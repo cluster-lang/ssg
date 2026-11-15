@@ -15,8 +15,8 @@
     <div class="sidebar-backdrop"></div>
     <nav class="sidebar">
     <div class="sidebar-header">
-        <h1><a href="/index.html" style="color:#fff;text-decoration:none;">The Cluster Book</a></h1>
-        <p>Official Language Guide &middot; <strong>Cluster-SSG</strong></p>
+        <h1><a href="/index.html">The Cluster Book</a></h1>
+        <p>Official Language Guide</p>
     </div>
     <ul class="sidebar-nav">
         <li><a href="/index.html">Home</a></li>
@@ -68,20 +68,20 @@
   <li><code>ai_local(prompt: string, model: string) -> string</code>: Connects to a local Ollama instance and queries any custom-specified model.</li>
 </ul>
 <h3 id="fully-working-example">Fully Working Example:</h3>
-<pre><code class="language-python">fn main():
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">fn main():
     prompt := str("Write a one-sentence news headline about AI compilers")
     put str("Prompt: ") + prompt
     
     // Call the native AI assistant
     response := ai_ask(prompt)
-    put str("AI Response: ") + response</code></pre>
+    put str("AI Response: ") + response</code></pre></div></div>
 <p>During execution, the compiled C++ binary uses high-performance socket streaming to query the AI model, parsing and sanitizing the response at machine speed.</p>
 <hr />
 <h2 id="2--compilation-secrecy-the-security-advantage-of--out-binaries">2. Compilation Secrecy (The Security Advantage of <code>.out</code> Binaries)</h2>
 <p>In modern web development, security is a major concern. Popular backends built on JavaScript (Node.js), Python (Django/FastAPI), or Ruby (Rails) store their code on the server as plain text files.</p>
 <blockquote>[!WARNING]</blockquote>
 <blockquote>If a hacker gains read access to a Node.js or Python server via a local file inclusion (LFI) vulnerability or server misconfiguration, they can instantly read the raw source code. This reveals database passwords, private API keys, proprietary algorithms, and structural backend routes.</blockquote>
-<pre><code class="language-mermaid">graph TD
+<div class="language-mermaid highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-mermaid">graph TD
     subgraph Python/Node.js Server
         A[Hacker Breach] -->|Reads File System| B[Raw Plain-text Source Code]
         B -->|Leaks| C[DB Credentials & Algorithms]
@@ -89,7 +89,7 @@
     subgraph Cluster-lang Server
         D[Hacker Breach] -->|Reads File System| E[Compiled Binary: main.out]
         E -->|Only Machine Code| F[Secure Assembly Instructions]
-    end</code></pre>
+    end</code></pre></div></div>
 <h3 id="why-cluster-lang-is-inherently-secure">Why Cluster-lang is Inherently Secure:</h3>
 <p>1. <strong>Machine-Code Execution:</strong> The Cluster compiler transpiles code into C++ and compiles it directly to machine instructions (<code>main.out</code>). Even if the server is compromised, hackers only find compiled machine binary code.</p>
 <p>2. <strong>Reverse-Engineering Protection:</strong> Unlike bytecode languages (like Java or C#) that contain reflection metadata, a stripped C++ binary contains no variable names, comments, or class schemas. Guessing database models, application endpoints, or proprietary logic is extremely difficult.</p>
@@ -121,6 +121,11 @@
     <span>[Interactive Island: Counter]</span>
   </div>
 </cluster-island>
+
+<div class="chapter-nav">
+  <a href="/chapter14.html">&larr; Chapter 14</a>
+  <a href="/chapter16.html">Chapter 16 &rarr;</a>
+</div>
 
         </article>
     </main>

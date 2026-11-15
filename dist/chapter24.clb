@@ -1,6 +1,6 @@
 CLD/1.0
 META|Chapter 24: Cluster Containers (clc) & Declarative Sandboxing (.clc)|Cluster-lang Team|2026-11-15|chapter|cluster,systems,guide|chapter-24-cluster-containers-clc--declarative-sandboxing--clc|
-BLOCKS_COUNT|112
+BLOCKS_COUNT|105
 BLOCK|h1|1|Chapter 24: Cluster Containers (clc) & Declarative Sandboxing (.clc)
 BLOCK|p||Cluster-lang provides built-in support for containerization and sandbox isolation. While advanced users can orchestrate sandboxes programmatically using the low-level `container` namespace, Cluster-lang introduces a specialized, ultra-lightweight declarative container configuration format: **`.clc` files**.
 BLOCK|p||Compared to verbose, nested YAML configurations (like Docker Compose or GitHub Actions files), `.clc` is 50% smaller, much cleaner to read, and is compiled directly into a native binary by the toolchain.
@@ -114,14 +114,14 @@ BLOCK|h3|3|5.2 Pre-Built Cache Fallback
 BLOCK|p||If the host is not capable of compiling or lacks dependencies, the compiler automatically checks for pre-compiled, Zstandard-compressed rootfs archives (`.tar.zst`) for the target system architecture in GitHub releases. If found, it fetches the precompiled archive as a fast-cache fallback, extracting it instantly into the sandbox.
 BLOCK|hr||
 BLOCK|h2|2|7. Comparison & Key Advantages: `.clc` vs. Docker
-BLOCK|p||| Feature | Cluster Declarative `.clc` | Docker Compose YAML |
-BLOCK|p||| :--- | :--- | :--- |
-BLOCK|p||| **Code Size** | Very compact (No boilerplate, implicit mounts) | Verbose (Needs explicit volume & image mapping) |
-BLOCK|p||| **Typing & Validation** | Compiled and checked at JIT time | Static, parsed at runtime |
-BLOCK|p||| **Daemon Overhead** | Zero (Runs as standard host process) | Requires active Docker/Podman Daemon |
-BLOCK|p||| **Cleanup Guarantee** | Self-destructs vacuum directory immediately | Requires manual prune/image deletion |
-BLOCK|p||| **Host Privilege Model** | Automatic drop to invoker UID/GID | Runs as root inside VM or needs rootless setup |
-BLOCK|p||| **Download Footprint** | Under 1KB for recipes (forged locally) | Hundreds of MBs / GBs of OS layers |
+BLOCK|table||| Feature | Cluster Declarative `.clc` | Docker Compose YAML |
+| :--- | :--- | :--- |
+| **Code Size** | Very compact (No boilerplate, implicit mounts) | Verbose (Needs explicit volume & image mapping) |
+| **Typing & Validation** | Compiled and checked at JIT time | Static, parsed at runtime |
+| **Daemon Overhead** | Zero (Runs as standard host process) | Requires active Docker/Podman Daemon |
+| **Cleanup Guarantee** | Self-destructs vacuum directory immediately | Requires manual prune/image deletion |
+| **Host Privilege Model** | Automatic drop to invoker UID/GID | Runs as root inside VM or needs rootless setup |
+| **Download Footprint** | Under 1KB for recipes (forged locally) | Hundreds of MBs / GBs of OS layers |
 BLOCK|h3|3|7.1 Architectural Advantages over Docker
 BLOCK|list||**Zero-Daemon Footprint:** Docker requires a background daemon (`dockerd`) running constantly, which consumes CPU and RAM even when no containers are active. Cluster Containers run as native Linux processes—when a container starts, it executes syscalls directly; when it stops, it leaves absolutely zero memory footprint.
 BLOCK|list||**JIT Compilation Safety:** A `.clc` file compiles directly into C++ and machine code. Syntax errors, missing directory bindings, or type mismatches are caught before execution, preventing runtime failures common in untyped YAML files.

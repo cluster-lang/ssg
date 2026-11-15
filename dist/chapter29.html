@@ -15,8 +15,8 @@
     <div class="sidebar-backdrop"></div>
     <nav class="sidebar">
     <div class="sidebar-header">
-        <h1><a href="/index.html" style="color:#fff;text-decoration:none;">The Cluster Book</a></h1>
-        <p>Official Language Guide &middot; <strong>Cluster-SSG</strong></p>
+        <h1><a href="/index.html">The Cluster Book</a></h1>
+        <p>Official Language Guide</p>
     </div>
     <ul class="sidebar-nav">
         <li><a href="/index.html">Home</a></li>
@@ -71,17 +71,17 @@
 <hr />
 <h2 id="1--the-unsafe-block-boundary">1. The <code>unsafe</code> Block Boundary</h2>
 <p>To maintain software reliability, raw pointer dereferences and unchecked memory modifications can be scoped inside explicit <code>unsafe</code> blocks. This allows developers and security auditors to quickly isolate bare-metal operations:</p>
-<pre><code class="language-python">fn main():
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">fn main():
     val := 100
 
     unsafe:
         # Explicitly marked low-level memory block
         p := addr_of(val)
-        put "Address of val: " + to_text(ptr_to_int(p))</code></pre>
+        put "Address of val: " + to_text(ptr_to_int(p))</code></pre></div></div>
 <hr />
 <h2 id="2--address-of-and-dereferencing">2. Address-of and Dereferencing</h2>
 <p>Cluster-lang allows retrieving the memory address of local variables, model fields, and vector elements:</p>
-<pre><code class="language-python">fn main():
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">fn main():
     target := 42
 
     # Take address using addr_of or &
@@ -93,7 +93,7 @@
 
     # Mutate value through pointer
     *p = 999
-    put "Mutated target: " + to_text(target)    # 999</code></pre>
+    put "Mutated target: " + to_text(target)    # 999</code></pre></div></div>
 <hr />
 <h2 id="3--direct-heap-allocation-primitives">3. Direct Heap Allocation Primitives</h2>
 <p>For performance-critical code where the general garbage collector or automatic lifetime manager is bypassed, developers can manage raw heap memory directly:</p>
@@ -102,7 +102,7 @@
   <li><code>mem_free(p: ptr)</code>: Releases the allocated block (maps to libc <code>free</code>).</li>
   <li><code>mem_realloc(p: ptr, new_bytes: int) -> ptr</code>: Resizes an existing heap allocation.</li>
 </ul>
-<pre><code class="language-python">fn main():
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">fn main():
     # Allocate a buffer for 10 64-bit integers (80 bytes)
     buffer := mem_alloc(80)
 
@@ -113,7 +113,7 @@
     put "Value at buffer[0]: " + to_text(*p0)
 
     # Always free manually allocated buffers
-    mem_free(buffer)</code></pre>
+    mem_free(buffer)</code></pre></div></div>
 <hr />
 <h2 id="4--block-memory-operations-mem-set-mem-copy-mem-move">4. Block Memory Operations (<code>mem_set</code>, <code>mem_copy</code>, <code>mem_move</code>)</h2>
 <p>Bulk memory transfers compile directly to SIMD-accelerated CPU instructions:</p>
@@ -122,7 +122,7 @@
   <li><code>mem_copy(dest: ptr, src: ptr, count: int)</code>: High-speed non-overlapping copy.</li>
   <li><code>mem_move(dest: ptr, src: ptr, count: int)</code>: Safe copy handling overlapping regions.</li>
 </ul>
-<pre><code class="language-python">fn main():
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">fn main():
     src := mem_alloc(64)
     dst := mem_alloc(64)
 
@@ -133,7 +133,7 @@
     mem_copy(dst, src, 64)
 
     mem_free(src)
-    mem_free(dst)</code></pre>
+    mem_free(dst)</code></pre></div></div>
 <hr />
 <h2 id="5--pointer-arithmetic">5. Pointer Arithmetic</h2>
 <p>Cluster-lang supports precise byte-level and element-level pointer offset calculations:</p>
@@ -146,7 +146,7 @@
 <hr />
 <h2 id="6--scoped-arena-allocator-stdalloc">6. Scoped Arena Allocator (<code>std::alloc</code>)</h2>
 <p>Repeated individual heap allocations cause memory fragmentation and cache misses. The Cluster standard library includes a high-performance <strong>Arena Allocator</strong> in <code>std/alloc.zk</code> (<code>std/alloc.cl</code>):</p>
-<pre><code class="language-python"># Create an arena with a 1MB contiguous buffer
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python"># Create an arena with a 1MB contiguous buffer
 arena := Arena_new(1048576)
 
 # Allocate fast, linear memory slices with zero malloc overhead
@@ -155,7 +155,7 @@ buf2 := Arena_alloc(arena, 512)
 
 # Reset or release all allocations at once in a single instruction!
 Arena_reset(arena)
-Arena_free(arena)</code></pre>
+Arena_free(arena)</code></pre></div></div>
 <hr />
 <h3 id="chapter-navigation">Chapter Navigation</h3>
 <ul>
@@ -169,6 +169,11 @@ Arena_free(arena)</code></pre>
     <span>[Interactive Island: Counter]</span>
   </div>
 </cluster-island>
+
+<div class="chapter-nav">
+  <a href="/chapter28.html">&larr; Chapter 28</a>
+  <a href="/chapter30.html">Chapter 30 &rarr;</a>
+</div>
 
         </article>
     </main>

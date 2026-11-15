@@ -15,8 +15,8 @@
     <div class="sidebar-backdrop"></div>
     <nav class="sidebar">
     <div class="sidebar-header">
-        <h1><a href="/index.html" style="color:#fff;text-decoration:none;">The Cluster Book</a></h1>
-        <p>Official Language Guide &middot; <strong>Cluster-SSG</strong></p>
+        <h1><a href="/index.html">The Cluster Book</a></h1>
+        <p>Official Language Guide</p>
     </div>
     <ul class="sidebar-nav">
         <li><a href="/index.html">Home</a></li>
@@ -62,51 +62,51 @@
 <hr />
 <h2 id="1--conditionals-if-elif-else">1. Conditionals (<code>if</code>, <code>elif</code>, <code>else</code>)</h2>
 <p>Cluster-lang uses standard Pythonic indentation and keywords for conditionals. Condition expressions do not require parentheses:</p>
-<pre><code class="language-python">x := 10
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">x := 10
 
 if x > 15:
     put "x is large"
 elif x > 5:
     put "x is medium"
 else:
-    put "x is small"</code></pre>
+    put "x is small"</code></pre></div></div>
 <hr />
 <h2 id="2--loops-while-for">2. Loops (<code>while</code>, <code>for</code>)</h2>
 <h3 id="while-loops">While Loops</h3>
 <p>A <code>while</code> loop runs as long as a condition evaluates to true:</p>
-<pre><code class="language-python">i := 0
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">i := 0
 while i < 5:
     put i
-    i = i + 1</code></pre>
+    i = i + 1</code></pre></div></div>
 <h3 id="for-loops">For Loops</h3>
 <p><code>for</code> loops iterate over a range of numbers. The syntax follows: <code>for variable in range(start, end, step)</code>:</p>
-<pre><code class="language-python">// Prints 0, 1, 2, 3, 4
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">// Prints 0, 1, 2, 3, 4
 for i in range(0, 5):
     put i
 
 // Prints 0, 2, 4 (step = 2)
 for j in range(0, 5, 2):
-    put j</code></pre>
+    put j</code></pre></div></div>
 <hr />
 <h2 id="3--functions">3. Functions</h2>
 <p>Functions are defined using the <code>fn</code> keyword.</p>
 <h3 id="standard-function">Standard Function</h3>
 <p>Specify parameter names with types, and the return type using the <code>-></code> arrow:</p>
-<pre><code class="language-python">fn add(a: int, b: int) -> int:
-    return a + b</code></pre>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">fn add(a: int, b: int) -> int:
+    return a + b</code></pre></div></div>
 <h3 id="arrow-functions-lambdas">Arrow Functions (Lambdas)</h3>
 <p>For concise callback logic or math expressions, use the arrow function syntax:</p>
-<pre><code class="language-python">// Multi-parameter arrow function
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">// Multi-parameter arrow function
 add := (a, b) => a + b
 
 // Single-parameter arrow function (parentheses optional)
 square := x => x * x
 
 put add(5, 3)     // Prints 8
-put square(4)     // Prints 16</code></pre>
+put square(4)     // Prints 16</code></pre></div></div>
 <h3 id="implicit-returns">Implicit Returns</h3>
 <p>For single-expression functions, you can omit both the <code>return</code> keyword and block indentations. The expression value is automatically returned:</p>
-<pre><code class="language-python">fn multiply(a: int, b: int) -> int: a * b</code></pre>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">fn multiply(a: int, b: int) -> int: a * b</code></pre></div></div>
 <p>Under the hood, the compiler prepends <code>return</code> to <code>a <em> b</code>, compiling it directly as <code>return a </em> b;</code> in C++.</p>
 <hr />
 <h3 id="chapter-navigation">Chapter Navigation</h3>
@@ -121,6 +121,11 @@ put square(4)     // Prints 16</code></pre>
     <span>[Interactive Island: Counter]</span>
   </div>
 </cluster-island>
+
+<div class="chapter-nav">
+  <a href="/chapter1.html">&larr; Chapter 1</a>
+  <a href="/chapter3.html">Chapter 3 &rarr;</a>
+</div>
 
         </article>
     </main>

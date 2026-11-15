@@ -15,8 +15,8 @@
     <div class="sidebar-backdrop"></div>
     <nav class="sidebar">
     <div class="sidebar-header">
-        <h1><a href="/index.html" style="color:#fff;text-decoration:none;">The Cluster Book</a></h1>
-        <p>Official Language Guide &middot; <strong>Cluster-SSG</strong></p>
+        <h1><a href="/index.html">The Cluster Book</a></h1>
+        <p>Official Language Guide</p>
     </div>
     <ul class="sidebar-nav">
         <li><a href="/index.html">Home</a></li>
@@ -62,16 +62,16 @@
 <hr />
 <h2 id="1--the-dynamic-any-type-with-c20-variant-backing">1. The Dynamic <code>any</code> Type with C++20 Variant Backing</h2>
 <p>Cluster-lang provides an <code>any</code> type for variables whose types can change at runtime. Unlike slow interpreted languages, Cluster-lang implements this with high-performance stack-allocated C++20 variants (<code>ClusterAny</code>), avoiding costly heap allocations and garbage collection.</p>
-<pre><code class="language-python">x: any = 42
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">x: any = 42
 put x          // Prints 42
 
 x = "Hello, Cluster!"
-put x          // Prints Hello, Cluster!</code></pre>
+put x          // Prints Hello, Cluster!</code></pre></div></div>
 <hr />
 <h2 id="2--static-type-promotion-pass-zero-overhead">2. Static Type Promotion Pass (Zero Overhead)</h2>
 <p>If a variable declared as <code>any</code> is assigned uniform types (e.g. only numbers), the Cluster compiler performs <strong>Static Type Promotion</strong>.</p>
-<pre><code class="language-python">y: any = 3.14
-y = 1.5</code></pre>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">y: any = 3.14
+y = 1.5</code></pre></div></div>
 <p>At build time, the typechecker recognizes that <code>y</code> is only ever assigned double-precision floating-point values. It optimizes <code>y</code>'s transpiled type to a native C++ <code>double</code>, executing at full hardware speed without any runtime type-check penalty.</p>
 <hr />
 <h2 id="3--auto-import-resolution">3. Auto-Import Resolution</h2>
@@ -84,30 +84,30 @@ y = 1.5</code></pre>
   <li><code>tensor</code> (Tensor operations)</li>
 </ul>
 <p>You can call standard methods immediately without writing manual <code>import</code> headers:</p>
-<pre><code class="language-python">fn main():
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">fn main():
     content := fs.read("data.txt")
-    put content</code></pre>
+    put content</code></pre></div></div>
 <hr />
 <h2 id="4--structured-json-diagnostics---json-errors">4. Structured JSON Diagnostics (<code>--json-errors</code>)</h2>
 <p>For AI code editors and automated build agents, the compiler supports a structured output flag.</p>
 <p>Executing compilation with the <code>--json-errors</code> flag formats parser syntax and typechecker diagnostics into a structured JSON array:</p>
-<pre><code class="language-bash">cluster my_code.cl --json-errors</code></pre>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-bash">cluster my_code.cl --json-errors</code></pre></div></div>
 <p><strong>Example output:</strong></p>
-<pre><code class="language-json">[
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-json">[
   {
     "line": 12,
     "column": 5,
     "type": "TypeError",
     "message": "Cannot assign string to integer variable 'count'"
   }
-]</code></pre>
+]</code></pre></div></div>
 <p>This enables LLMs and IDE extensions to parse and automatically correct errors instantly.</p>
 <hr />
 <h2 id="5--global-input-function">5. Global <code>input()</code> function</h2>
 <p>For receiving console input from users, Cluster-lang provides a simple, global built-in function <code>input(prompt)</code> that matches standard developer conventions:</p>
-<pre><code class="language-python">fn main():
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">fn main():
     name := input("Enter name: ")
-    put "Hello, " + name</code></pre>
+    put "Hello, " + name</code></pre></div></div>
 <p>The prompt is displayed on standard output, and the function reads a single line from standard input.</p>
 <hr />
 <h3 id="chapter-navigation">Chapter Navigation</h3>
@@ -122,6 +122,11 @@ y = 1.5</code></pre>
     <span>[Interactive Island: Counter]</span>
   </div>
 </cluster-island>
+
+<div class="chapter-nav">
+  <a href="/chapter8.html">&larr; Chapter 8</a>
+  <a href="/chapter10.html">Chapter 10 &rarr;</a>
+</div>
 
         </article>
     </main>

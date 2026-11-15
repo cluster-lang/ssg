@@ -1,18 +1,18 @@
 CLD/1.0
 META|Chapter 19: Zero-Overhead Traits & C++20 Concept Constraints|Cluster-lang Team|2026-11-15|chapter|cluster,systems,guide|chapter-19-zero-overhead-traits--c20-concept-constraints|
-BLOCKS_COUNT|40
+BLOCKS_COUNT|35
 BLOCK|h1|1|Chapter 19: Zero-Overhead Traits & C++20 Concept Constraints
 BLOCK|p||Traits in Cluster-lang provide a powerful way to define shared behavior across different data models. Unlike dynamically dispatched interfaces found in many high-level languages, Cluster-lang traits are designed for maximum performance. They serve as contracts that types must fulfill, enabling expressive generic programming while guaranteeing zero-overhead abstraction through static monomorphization.
 BLOCK|hr||
 BLOCK|h2|2|1. Understanding Traits
 BLOCK|p||In software design, you often need to express that multiple distinct types share some common functionality. While object-oriented languages typically use interfaces or base classes with virtual methods, Cluster-lang approaches this through **traits**.
 BLOCK|p||A trait defines a set of function signatures that a model must implement to satisfy the trait. This approach offers several advantages:
-BLOCK|p||| Language Concept | Dispatch Type | Performance Overhead |
-BLOCK|p||| :--- | :--- | :--- |
-BLOCK|p||| Java/C# Interfaces | Dynamic (vtable) | High (cache misses, indirect calls) |
-BLOCK|p||| Go Interfaces | Dynamic (itab) | Medium (interface wrapper allocation) |
-BLOCK|p||| Rust Traits | Static (default) | None (compile-time resolution) |
-BLOCK|p||| **Cluster-lang Traits** | **Static (C++20 Concepts)** | **None (zero-overhead)** |
+BLOCK|table||| Language Concept | Dispatch Type | Performance Overhead |
+| :--- | :--- | :--- |
+| Java/C# Interfaces | Dynamic (vtable) | High (cache misses, indirect calls) |
+| Go Interfaces | Dynamic (itab) | Medium (interface wrapper allocation) |
+| Rust Traits | Static (default) | None (compile-time resolution) |
+| **Cluster-lang Traits** | **Static (C++20 Concepts)** | **None (zero-overhead)** |
 BLOCK|p||Cluster-lang traits guarantee that all abstractions are resolved at compile-time. There is no virtual method table (vtable) overhead and no runtime penalty, making them ideal for high-performance systems engineering.
 BLOCK|hr||
 BLOCK|h2|2|2. Defining a Trait

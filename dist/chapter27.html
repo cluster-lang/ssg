@@ -15,8 +15,8 @@
     <div class="sidebar-backdrop"></div>
     <nav class="sidebar">
     <div class="sidebar-header">
-        <h1><a href="/index.html" style="color:#fff;text-decoration:none;">The Cluster Book</a></h1>
-        <p>Official Language Guide &middot; <strong>Cluster-SSG</strong></p>
+        <h1><a href="/index.html">The Cluster Book</a></h1>
+        <p>Official Language Guide</p>
     </div>
     <ul class="sidebar-nav">
         <li><a href="/index.html">Home</a></li>
@@ -74,7 +74,7 @@
 <hr />
 <h2 id="2--practical-binary-file-patching-example">2. Practical Binary File Patching Example</h2>
 <p>The following program creates a dummy binary file, opens it in read/write binary mode, navigates to a specific offset, and rewrites its contents.</p>
-<pre><code class="language-python">fn patch_binary(file_path: string, offset: int, replacement_bytes: vector[int]) -> int:
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">fn patch_binary(file_path: string, offset: int, replacement_bytes: vector[int]) -> int:
     # Open the compiled binary file on disk in read/write binary mode
     f := file_open(file_path, "r+b")
     if f == 0:
@@ -112,12 +112,12 @@ fn main():
     # 3. Read and print the resulting patched output
     updated_signature := read_file("app_signature.bin")
     put "Updated signature: " + updated_signature
-    # Output: Updated signature: VER_2.5_PROD</code></pre>
+    # Output: Updated signature: VER_2.5_PROD</code></pre></div></div>
 <hr />
 <h2 id="3--how-to-compile-and-run">3. How to Compile and Run</h2>
 <p>To compile a binary patcher in Cluster-lang, compile normally via <code>zkc</code>:</p>
-<pre><code class="language-bash">zkc patcher.cl -o patcher.out
-./patcher.out</code></pre>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-bash">zkc patcher.cl -o patcher.out
+./patcher.out</code></pre></div></div>
 <p>This compiles your script down to high-performance C++ code utilizing raw file streams, making it capable of patching gigabyte-sized binary files at maximum hard-drive speeds.</p>
 <hr />
 <h3 id="chapter-navigation">Chapter Navigation</h3>
@@ -132,6 +132,11 @@ fn main():
     <span>[Interactive Island: Counter]</span>
   </div>
 </cluster-island>
+
+<div class="chapter-nav">
+  <a href="/chapter26.html">&larr; Chapter 26</a>
+  <a href="/chapter28.html">Chapter 28 &rarr;</a>
+</div>
 
         </article>
     </main>

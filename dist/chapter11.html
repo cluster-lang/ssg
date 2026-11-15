@@ -15,8 +15,8 @@
     <div class="sidebar-backdrop"></div>
     <nav class="sidebar">
     <div class="sidebar-header">
-        <h1><a href="/index.html" style="color:#fff;text-decoration:none;">The Cluster Book</a></h1>
-        <p>Official Language Guide &middot; <strong>Cluster-SSG</strong></p>
+        <h1><a href="/index.html">The Cluster Book</a></h1>
+        <p>Official Language Guide</p>
     </div>
     <ul class="sidebar-nav">
         <li><a href="/index.html">Home</a></li>
@@ -67,7 +67,7 @@
 <h2 id="2--setting-up-components">2. Setting Up Components</h2>
 <h3 id="css-module-styles-clx">CSS Module (<code>styles.clx</code>)</h3>
 <p>You can define your global styling and page layouts inside a CSS template:</p>
-<pre><code class="language-html"><component name="GetAppStyles">
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-html"><component name="GetAppStyles">
     body {
         background: linear-gradient(135deg, #1e1e2f, #111119);
         color: #ffffff;
@@ -87,19 +87,19 @@
         cursor: pointer;
         font-weight: bold;
     }
-</component></code></pre>
+</component></code></pre></div></div>
 <h3 id="javascript-module-scripts-clx">JavaScript Module (<code>scripts.clx</code>)</h3>
 <p>You can isolate interactive scripts and client-side logic:</p>
-<pre><code class="language-html"><component name="GetClientScripts">
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-html"><component name="GetClientScripts">
     function onAction() {
         console.log("[Cluster Client] Action triggered!");
         alert("Hello from the browser!");
     }
-</component></code></pre>
+</component></code></pre></div></div>
 <hr />
 <h2 id="3--assembling-the-application-main-cl">3. Assembling the Application (<code>main.cl</code>)</h2>
 <p>You import your modules using namespace aliases and concatenate them into your final response template:</p>
-<pre><code class="language-python">import "styles.clx" as css
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">import "styles.clx" as css
 import "scripts.clx" as js
 
 fn main():
@@ -118,7 +118,7 @@ fn main():
 
     put "[Cluster] Starting Web Server..."
     put "[Cluster] Access the application in your browser at: http://localhost:8080"
-    serve_web(8080, html)</code></pre>
+    serve_web(8080, html)</code></pre></div></div>
 <hr />
 <h2 id="4--why-this-architecture-outperforms-the-market">4. Why This Architecture Outperforms the Market</h2>
 <p>1. <strong>Zero Disk I/O at Runtime:</strong> Traditional servers (Node.js, Python, PHP) read HTML/CSS template files from disk or parse them at runtime. Cluster compiles everything into static C++ string literals in the code segment.</p>
@@ -137,6 +137,11 @@ fn main():
     <span>[Interactive Island: Counter]</span>
   </div>
 </cluster-island>
+
+<div class="chapter-nav">
+  <a href="/chapter10.html">&larr; Chapter 10</a>
+  <a href="/chapter12.html">Chapter 12 &rarr;</a>
+</div>
 
         </article>
     </main>

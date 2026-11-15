@@ -15,8 +15,8 @@
     <div class="sidebar-backdrop"></div>
     <nav class="sidebar">
     <div class="sidebar-header">
-        <h1><a href="/index.html" style="color:#fff;text-decoration:none;">The Cluster Book</a></h1>
-        <p>Official Language Guide &middot; <strong>Cluster-SSG</strong></p>
+        <h1><a href="/index.html">The Cluster Book</a></h1>
+        <p>Official Language Guide</p>
     </div>
     <ul class="sidebar-nav">
         <li><a href="/index.html">Home</a></li>
@@ -59,7 +59,7 @@
         <h1 id="documentation--cli-guide-">Documentation & CLI Guide 📖</h1>
 <p>Get started with Cluster-SSG in seconds.</p>
 <h2 id="cli-commands">CLI Commands</h2>
-<pre><code class="language-bash"># Build the entire static site into dist/
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-bash"># Build the entire static site into dist/
 cluster-ssg build
 
 # Start the preview development server on localhost:3000
@@ -75,11 +75,11 @@ cluster-ssg pack site/pages/index.cld dist/index.clb
 cluster-ssg unpack dist/index.clb site/pages/reconstructed.cld
 
 # Run the Hugo-speed in-memory benchmark (1,000 pages)
-cluster-ssg bench</code></pre>
+cluster-ssg bench</code></pre></div></div>
 <hr />
 <h2 id="the--cld-document-format">The .cld Document Format</h2>
 <p>Each <code>.cld</code> file contains a structured header followed by the <code>===</code> splitter:</p>
-<pre><code class="language-cld">title: My First Article
+<div class="language-cld highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-cld">title: My First Article
 author: Jane Doe
 date: 2026-11-15
 layout: post
@@ -90,7 +90,7 @@ description: A quick start guide.
 # Heading 1
 This is a paragraph with **bold**, *italic*, and `inline code`.
 
-<island name="Counter" client:load count="10" /></code></pre>
+<island name="Counter" client:load count="10" /></code></pre></div></div>
 <hr />
 <h2 id="component-islands--partial-hydration">Component Islands & Partial Hydration</h2>
 <p>Cluster-SSG supports 4 client hydration directives:</p>

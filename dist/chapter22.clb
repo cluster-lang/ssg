@@ -1,6 +1,6 @@
 CLD/1.0
 META|Chapter 22: Production HTTP & HTTPS Web Stack|Cluster-lang Team|2026-11-15|chapter|cluster,systems,guide|chapter-22-production-http--https-web-stack|
-BLOCKS_COUNT|50
+BLOCKS_COUNT|45
 BLOCK|h1|1|Chapter 22: Production HTTP & HTTPS Web Stack
 BLOCK|p||Cluster provides a highly concurrent, production-ready web stack right out of the standard library, built under the hood on the blazing-fast `cpp-httplib` library. This integration brings C++ bare-metal performance while retaining the Pythonic, highly readable syntax that Cluster developers expect. Whether you are building internal microservices or high-performance public-facing APIs, Cluster's web stack gives you complete control without boilerplate overhead.
 BLOCK|hr||
@@ -51,12 +51,12 @@ api_response := http::post("https://api.example.com/data", "{\"key\":\"value\"}"
 BLOCK|hr||
 BLOCK|h2|2|7. Ecosystem Comparison
 BLOCK|p||Cluster's standard library aims to provide the best balance of speed and usability.
-BLOCK|p||| Feature | Cluster (`http`) | Python (Flask) | Node (Express) | Go (`net/http`) |
-BLOCK|p||| --- | --- | --- | --- | --- |
-BLOCK|p||| **Performance** | C++ compiled (Fast) | Interpreted (Slow) | JIT (Medium) | Compiled (Fast) |
-BLOCK|p||| **Syntax** | Minimal / Pythonic | Decorator-heavy | Callback / Async | Structs & Interfaces |
-BLOCK|p||| **Concurrency** | Native Multi-threading | GIL Constrained | Single-threaded | Goroutines |
-BLOCK|p||| **Setup Boilerplate** | Very Low | Low | Low | Medium |
+BLOCK|table||| Feature | Cluster (`http`) | Python (Flask) | Node (Express) | Go (`net/http`) |
+| --- | --- | --- | --- | --- |
+| **Performance** | C++ compiled (Fast) | Interpreted (Slow) | JIT (Medium) | Compiled (Fast) |
+| **Syntax** | Minimal / Pythonic | Decorator-heavy | Callback / Async | Structs & Interfaces |
+| **Concurrency** | Native Multi-threading | GIL Constrained | Single-threaded | Goroutines |
+| **Setup Boilerplate** | Very Low | Low | Low | Medium |
 BLOCK|hr||
 BLOCK|h2|2|8. Complete Working Example
 BLOCK|p||Below is a complete, executable example demonstrating how to spin up a non-blocking asynchronous web server and immediately consume its API using Cluster's built-in client.

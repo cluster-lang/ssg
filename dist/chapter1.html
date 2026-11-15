@@ -15,8 +15,8 @@
     <div class="sidebar-backdrop"></div>
     <nav class="sidebar">
     <div class="sidebar-header">
-        <h1><a href="/index.html" style="color:#fff;text-decoration:none;">The Cluster Book</a></h1>
-        <p>Official Language Guide &middot; <strong>Cluster-SSG</strong></p>
+        <h1><a href="/index.html">The Cluster Book</a></h1>
+        <p>Official Language Guide</p>
     </div>
     <ul class="sidebar-nav">
         <li><a href="/index.html">Home</a></li>
@@ -64,37 +64,66 @@
 <p>In Cluster-lang, variables can be defined with implicit or explicit type declarations.</p>
 <h3 id="implicit-variable-declaration-">Implicit Variable Declaration (<code>:=</code>)</h3>
 <p>By default, variables are declared and initialized using the <code>:=</code> operator. The compiler automatically infers the correct type:</p>
-<pre><code class="language-python">x := 42                // Inferred as int
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">x := 42                // Inferred as int
 name := "Alice"        // Inferred as string
 is_valid := True       // Inferred as bool
-pi := 3.1415           // Inferred as float</code></pre>
+pi := 3.1415           // Inferred as float</code></pre></div></div>
 <h3 id="explicit-variable-declaration--type-">Explicit Variable Declaration (<code>: type :=</code>)</h3>
 <p>If you want to enforce a specific type or help the compiler's static analysis, add a colon <code>:</code> followed by the type name:</p>
-<pre><code class="language-python">age: int := 25
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">age: int := 25
 price: float := 19.99
-greeting: string := "Hello, World!"</code></pre>
+greeting: string := "Hello, World!"</code></pre></div></div>
 <h3 id="constants-constexpr---const">Constants (<code>constexpr</code> / <code>const</code>)</h3>
 <p>Constants are variables whose values cannot change after initialization. Prefix the declaration with <code>constexpr</code> or <code>const</code>:</p>
-<pre><code class="language-python">constexpr PI := 3.14159
-constexpr MaxConnections: int := 100</code></pre>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">constexpr PI := 3.14159
+constexpr MaxConnections: int := 100</code></pre></div></div>
 <hr />
 <h2 id="2--basic-data-types">2. Basic Data Types</h2>
 <p>Cluster-lang supports the following primitive types:</p>
-<p>| Type | Description | C++ Under the Hood |</p>
-<p>| :--- | :--- | :--- |</p>
-<p>| <code>int</code> | Signed 64-bit integer | <code>int64_t</code> / <code>int</code> |</p>
-<p>| <code>float</code> | 64-bit double-precision floating point | <code>double</code> / <code>float</code> |</p>
-<p>| <code>string</code> | Text string | <code>std::string</code> |</p>
-<p>| <code>bool</code> | Boolean (<code>True</code> or <code>False</code>) | <code>bool</code> |</p>
-<p>| <code>void</code> | Empty/return-free type | <code>void</code> |</p>
+<table>
+<thead>
+<tr>
+  <th>Type</th>
+  <th>Description</th>
+  <th>C++ Under the Hood</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>int</code></td>
+  <td>Signed 64-bit integer</td>
+  <td><code>int64_t</code> / <code>int</code></td>
+</tr>
+<tr>
+  <td><code>float</code></td>
+  <td>64-bit double-precision floating point</td>
+  <td><code>double</code> / <code>float</code></td>
+</tr>
+<tr>
+  <td><code>string</code></td>
+  <td>Text string</td>
+  <td><code>std::string</code></td>
+</tr>
+<tr>
+  <td><code>bool</code></td>
+  <td>Boolean (<code>True</code> or <code>False</code>)</td>
+  <td><code>bool</code></td>
+</tr>
+<tr>
+  <td><code>void</code></td>
+  <td>Empty/return-free type</td>
+  <td><code>void</code></td>
+</tr>
+</tbody>
+</table>
 <hr />
 <h2 id="3--basic-input---output-put">3. Basic Input / Output (<code>put</code>)</h2>
 <p>The <code>put</code> statement outputs values to the console, automatically appending a newline. You can pass variables, literals, or expressions:</p>
-<pre><code class="language-python">put "Hello, Alice!"
-put 42 + 8</code></pre>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">put "Hello, Alice!"
+put 42 + 8</code></pre></div></div>
 <p>To concatenate strings and print them:</p>
-<pre><code class="language-python">name := "Bob"
-put "Hello, " + name</code></pre>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">name := "Bob"
+put "Hello, " + name</code></pre></div></div>
 <hr />
 <h3 id="chapter-navigation">Chapter Navigation</h3>
 <ul>
@@ -107,6 +136,11 @@ put "Hello, " + name</code></pre>
     <span>[Interactive Island: Counter]</span>
   </div>
 </cluster-island>
+
+<div class="chapter-nav">
+  <span></span>
+  <a href="/chapter2.html">Chapter 2 &rarr;</a>
+</div>
 
         </article>
     </main>

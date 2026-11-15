@@ -1,6 +1,6 @@
 CLD/1.0
 META|Chapter 21: Custom Memory Allocators|Cluster-lang Team|2026-11-15|chapter|cluster,systems,guide|chapter-21-custom-memory-allocators|
-BLOCKS_COUNT|47
+BLOCKS_COUNT|42
 BLOCK|h1|1|Chapter 21: Custom Memory Allocators
 BLOCK|p||While Cluster's default memory management handles most use cases gracefully, high-performance domains demand granular control over memory allocation. By seamlessly binding to C++ allocation patterns, Cluster allows you to implement custom memory allocators. This feature provides Python-like readability while unlocking bare-metal C++ efficiency, giving you complete control over memory layouts and allocation strategies.
 BLOCK|hr||
@@ -10,12 +10,12 @@ BLOCK|list||**Game Engines**: Minimize latency spikes and fragmentation by pre-a
 BLOCK|list||**Embedded Systems**: Fit within tight memory constraints and avoid dynamic allocation completely.
 BLOCK|list||**Arena Allocation**: Allocate complex node-based structures and free them entirely in one operation.
 BLOCK|list||**Debugging & Profiling**: Track allocation sizes, detect memory leaks, and profile allocation hotspots.
-BLOCK|p||| Allocator Type | Best Use Case | Performance Characteristics |
-BLOCK|p||| -------------- | ------------- | --------------------------- |
-BLOCK|p||| Standard Heap  | General use   | Moderate speed, high fragmentation risk |
-BLOCK|p||| Pool Allocator | Fixed size nodes | Very fast, zero fragmentation |
-BLOCK|p||| Arena / Linear | Per-frame data   | Blazing fast allocation, bulk deallocation |
-BLOCK|p||| Tracking       | Debugging        | Slower due to logging/tracking overhead |
+BLOCK|table||| Allocator Type | Best Use Case | Performance Characteristics |
+| -------------- | ------------- | --------------------------- |
+| Standard Heap  | General use   | Moderate speed, high fragmentation risk |
+| Pool Allocator | Fixed size nodes | Very fast, zero fragmentation |
+| Arena / Linear | Per-frame data   | Blazing fast allocation, bulk deallocation |
+| Tracking       | Debugging        | Slower due to logging/tracking overhead |
 BLOCK|hr||
 BLOCK|h2|2|2. Using Allocator-Aware Box Types
 BLOCK|p||The `box[T]` type in Cluster represents a uniquely-owned pointer. For custom memory control, you can provide an allocator type as the second type argument. The syntax is `box[T, AllocType[T]]`.

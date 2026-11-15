@@ -101,6 +101,51 @@ fn builder_compile_page(cfg: SsgConfig, tr: TemplateRegistry, islands: IslandReg
 
     return bytes_written
 
+fn builder_compile_chapter(cfg: SsgConfig, tr: TemplateRegistry, islands: IslandRegistry, src_path: string, out_path: string, ci: int, total_chapters: int) -> int:
+    doc := ssg_load_cld(src_path, out_path)
+    
+    // Build bottom chapter navigation bar
+    let mut nav_html: string = "<div class=\"chapter-nav\">\n"
+    if ci > 1:
+        prev_idx := ci - 1
+        nav_html = nav_html + "  <a href=\"/chapter" + str(prev_idx) + ".html\">&larr; Chapter " + str(prev_idx) + "</a>\n"
+    else:
+        nav_html = nav_html + "  <span></span>\n"
+    
+    if ci < total_chapters:
+        next_idx := ci + 1
+        nav_html = nav_html + "  <a href=\"/chapter" + str(next_idx) + ".html\">Chapter " + str(next_idx) + " &rarr;</a>\n"
+    else:
+        nav_html = nav_html + "  <span></span>\n"
+    nav_html = nav_html + "</div>\n"
+    
+    // Append nav bar to chapter content body
+    doc.html_body = doc.html_body + "\n" + nav_html
+    
+    // Step 1: Render layout template
+    page_html := template_render_page(tr, doc, cfg.site_name, cfg.site_tagline)
+    
+    // Step 2: Hydrate Islands (Astro Partial Hydration)
+    final_html := islands_hydrate_page(islands, doc.cld, page_html)
+    
+    // Step 3: Write HTML to dist
+    file_write(out_path, final_html)
+    let mut bytes_written: int = len(final_html)
+
+    // Step 4: Write Packed Binary Bundle (.clb)
+    if cfg.output_binary == 1:
+        packed_bin := ssg_doc_to_binary(doc)
+        bin_out_path := out_path
+        if cld_starts_with(out_path, cfg.dist_dir + "/") == 1:
+            if len(out_path) > 5 and substring(out_path, len(out_path) - 5, 5) == ".html":
+                bin_out_path = substring(out_path, 0, len(out_path) - 5) + ".clb"
+            else:
+                bin_out_path = out_path + ".clb"
+            file_write(bin_out_path, packed_bin)
+            bytes_written = bytes_written + len(packed_bin)
+
+    return bytes_written
+
 fn builder_run_all(cfg: SsgConfig) -> BuildReport:
     tr := builder_init_templates(cfg)
     islands := islands_registry_new()
@@ -137,7 +182,7 @@ fn builder_run_all(cfg: SsgConfig) -> BuildReport:
         src_path := cfg.site_dir + "/pages/" + ch_name + ".cld"
         out_path := cfg.dist_dir + "/" + ch_name + ".html"
         if file_exists(src_path) == 1:
-            bytes := builder_compile_page(cfg, tr, islands, src_path, out_path)
+            bytes := builder_compile_chapter(cfg, tr, islands, src_path, out_path, ci, 32)
             total_bytes = total_bytes + bytes
             total_pages = total_pages + 1
             if cfg.output_binary == 1:

@@ -15,8 +15,8 @@
     <div class="sidebar-backdrop"></div>
     <nav class="sidebar">
     <div class="sidebar-header">
-        <h1><a href="/index.html" style="color:#fff;text-decoration:none;">The Cluster Book</a></h1>
-        <p>Official Language Guide &middot; <strong>Cluster-SSG</strong></p>
+        <h1><a href="/index.html">The Cluster Book</a></h1>
+        <p>Official Language Guide</p>
     </div>
     <ul class="sidebar-nav">
         <li><a href="/index.html">Home</a></li>
@@ -71,7 +71,7 @@
 <hr />
 <h2 id="1--creating-tensors">1. Creating Tensors</h2>
 <p>Tensors can be constructed using native built-ins:</p>
-<pre><code class="language-python">fn main():
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">fn main():
     # Create a 2x3 matrix filled with zeros
     z := tensor_zeros(2, 3)
 
@@ -84,11 +84,11 @@
     # Inspect dimensions
     put "Rows: " + to_text(z.rows())     # 2
     put "Cols: " + to_text(z.cols())     # 3
-    put "Size: " + to_text(z.size())     # 6</code></pre>
+    put "Size: " + to_text(z.size())     # 6</code></pre></div></div>
 <hr />
 <h2 id="2--matrix-multiplication-operator--and-">2. Matrix Multiplication Operator (<code>@</code> and <code>@=</code>)</h2>
 <p>Cluster-lang adopts the universal <code>@</code> operator for matrix multiplication:</p>
-<pre><code class="language-python">fn main():
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">fn main():
     # 2x3 Matrix A
     a := tensor_zeros(2, 3)
     a.set(0, 0, 1.0)
@@ -111,7 +111,7 @@
     multiplier := tensor_fill(2, 2, 2.0)
     c @= multiplier
     put "After c @= multiplier:"
-    put c</code></pre>
+    put c</code></pre></div></div>
 <hr />
 <h2 id="3--high-performance-cache-optimized-gemm">3. High-Performance Cache-Optimized GEMM</h2>
 <p>In traditional matrix multiplication, standard <code>i-j-k</code> nested loops jump across memory rows, causing severe cache line evictions.</p>
@@ -124,7 +124,7 @@
 <hr />
 <h2 id="4--elementwise-math--scalar-scaling">4. Elementwise Math & Scalar Scaling</h2>
 <p>You can add, subtract, and multiply tensors elementwise with standard arithmetic operators:</p>
-<pre><code class="language-python">fn main():
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">fn main():
     a := tensor_fill(2, 2, 10.0)
     b := tensor_fill(2, 2, 3.0)
 
@@ -138,11 +138,11 @@
     prod := a * b
 
     # Scalar scaling (10 * 0.5 = 5)
-    scaled := a * 0.5</code></pre>
+    scaled := a * 0.5</code></pre></div></div>
 <hr />
 <h2 id="5--tensor-inspection--reductions">5. Tensor Inspection & Reductions</h2>
 <p>Tensors provide rich built-in inspection and reduction methods:</p>
-<pre><code class="language-python">fn main():
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">fn main():
     m := tensor_zeros(2, 3)
     # Fill elements...
     
@@ -155,11 +155,11 @@
     # Vector dot product
     v1 := tensor_fill(1, 4, 2.0)
     v2 := tensor_fill(1, 4, 3.0)
-    dot_product := v1.dot(v2)</code></pre>
+    dot_product := v1.dot(v2)</code></pre></div></div>
 <hr />
 <h2 id="6--the-standard-library-module-stdtensor">6. The Standard Library Module (<code>std::tensor</code>)</h2>
 <p>The standard library includes high-level linear algebra helpers in <code>std/tensor.zk</code> (<code>std/tensor.cl</code>):</p>
-<pre><code class="language-python">import std::tensor
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">import std::tensor
 
 fn main():
     # Identity matrix of size 4x4
@@ -170,7 +170,7 @@ fn main():
     W := from_vector(2, 2, weights_vec)
 
     # Convert tensor back to vector
-    out_vec := to_vector(W)</code></pre>
+    out_vec := to_vector(W)</code></pre></div></div>
 <hr />
 <h3 id="chapter-navigation">Chapter Navigation</h3>
 <ul>
@@ -184,6 +184,11 @@ fn main():
     <span>[Interactive Island: Counter]</span>
   </div>
 </cluster-island>
+
+<div class="chapter-nav">
+  <a href="/chapter30.html">&larr; Chapter 30</a>
+  <a href="/chapter32.html">Chapter 32 &rarr;</a>
+</div>
 
         </article>
     </main>

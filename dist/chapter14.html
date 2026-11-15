@@ -15,8 +15,8 @@
     <div class="sidebar-backdrop"></div>
     <nav class="sidebar">
     <div class="sidebar-header">
-        <h1><a href="/index.html" style="color:#fff;text-decoration:none;">The Cluster Book</a></h1>
-        <p>Official Language Guide &middot; <strong>Cluster-SSG</strong></p>
+        <h1><a href="/index.html">The Cluster Book</a></h1>
+        <p>Official Language Guide</p>
     </div>
     <ul class="sidebar-nav">
         <li><a href="/index.html">Home</a></li>
@@ -70,8 +70,8 @@
 </ul>
 <h3 id="standalone-execution">Standalone Execution:</h3>
 <p>Once downloaded, you do not need Python or external dependencies. You compile and execute Cluster-lang scripts directly using:</p>
-<pre><code class="language-bash"># Compile and execute natively in one step
-./cluster-v0.1-linux main.cl</code></pre>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-bash"># Compile and execute natively in one step
+./cluster-v0.1-linux main.cl</code></pre></div></div>
 <p>The standalone binary packages the parser, transpiler, and LLVM bindings internally, directly invoking the system compiler (<code>g++</code> or <code>clang++</code>) to build raw machine-code binaries (<code>.out</code>) instantly.</p>
 <hr />
 <h2 id="2--the-hybrid-site-engine-architecture">2. The Hybrid Site Engine Architecture</h2>
@@ -80,14 +80,14 @@
 <p>2. <strong><code>.cltp</code> (Cluster Template):</strong> Reusable HTML page structures.</p>
 <blockquote>[!NOTE]</blockquote>
 <blockquote>The template extension is <strong><code>.cltp</code></strong> (Cluster Template) rather than <code>.clt</code>, because <strong><code>.clt</code></strong> is strictly reserved for database schema table definitions (e.g., <code>users.clt</code> connected via <code>clt_connect()</code>).</blockquote>
-<pre><code class="language-mermaid">graph TD
+<div class="language-mermaid highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-mermaid">graph TD
     A[Article Data: .cld] -->|Transpiles to Struct| C[C++ Compiler]
     B[Page Layout: .cltp] -->|Transpiles to Layout Fn| C
     C -->|Compiles to| D[Native Executable: .out]
-    D -->|Serves instantly| E[Client Web Browser]</code></pre>
+    D -->|Serves instantly| E[Client Web Browser]</code></pre></div></div>
 <h3 id="type-safe-data-binding">Type-Safe Data Binding:</h3>
 <p>A <code>.cld</code> data source transpiles into a type-safe Cluster <code>model</code> representation. For example, <code>article.cld</code> automatically generates:</p>
-<pre><code class="language-python">model ContentData:
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">model ContentData:
     title: string
     date: string
     author: string
@@ -95,19 +95,59 @@
     body: string
 
 fn get_data() -> ContentData:
-    ...</code></pre>
+    ...</code></pre></div></div>
 <p>This ensures that templates bind variables at compile-time with 100% type safety, preventing layout syntax errors at runtime.</p>
 <hr />
 <h2 id="3--speed--performance-cluster-vs--astro--jekyll">3. Speed & Performance: Cluster vs. Astro & Jekyll</h2>
 <p>Modern site generators like <strong>Astro</strong> (JavaScript/Node.js) and <strong>Jekyll</strong> (Ruby) are popular, but they operate under major runtime constraints.</p>
-<p>| Feature | Astro (Node.js) | Jekyll (Ruby) | Cluster Site Engine (C++) |</p>
-<p>| :--- | :--- | :--- | :--- |</p>
-<p>| <strong>Language</strong> | JavaScript / TypeScript | Ruby | Cluster-lang (Compiles to C++) |</p>
-<p>| <strong>Runtime Dependency</strong> | Node.js Engine / V8 VM | Ruby Virtual Machine | <strong>None</strong> (Native Bare-Metal OS) |</p>
-<p>| <strong>Build & Render Phase</strong> | File System build / hydration | Liquid transpilation loops | <strong>Direct C++ header translation</strong> |</p>
-<p>| <strong>Startup Speed</strong> | ~500ms - 2s | ~1s - 3s | <strong>< 2 microseconds</strong> |</p>
-<p>| <strong>Memory Footprint</strong> | ~150MB - 300MB | ~80MB - 150MB | <strong>< 8MB</strong> |</p>
-<p>| <strong>Core Web Vitals / SEO</strong> | High (but has JS overhead) | High (Static files only) | <strong>Maximum</strong> (Instant first byte SSR) |</p>
+<table>
+<thead>
+<tr>
+  <th>Feature</th>
+  <th>Astro (Node.js)</th>
+  <th>Jekyll (Ruby)</th>
+  <th>Cluster Site Engine (C++)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Language</strong></td>
+  <td>JavaScript / TypeScript</td>
+  <td>Ruby</td>
+  <td>Cluster-lang (Compiles to C++)</td>
+</tr>
+<tr>
+  <td><strong>Runtime Dependency</strong></td>
+  <td>Node.js Engine / V8 VM</td>
+  <td>Ruby Virtual Machine</td>
+  <td><strong>None</strong> (Native Bare-Metal OS)</td>
+</tr>
+<tr>
+  <td><strong>Build & Render Phase</strong></td>
+  <td>File System build / hydration</td>
+  <td>Liquid transpilation loops</td>
+  <td><strong>Direct C++ header translation</strong></td>
+</tr>
+<tr>
+  <td><strong>Startup Speed</strong></td>
+  <td>~500ms - 2s</td>
+  <td>~1s - 3s</td>
+  <td><strong>< 2 microseconds</strong></td>
+</tr>
+<tr>
+  <td><strong>Memory Footprint</strong></td>
+  <td>~150MB - 300MB</td>
+  <td>~80MB - 150MB</td>
+  <td><strong>< 8MB</strong></td>
+</tr>
+<tr>
+  <td><strong>Core Web Vitals / SEO</strong></td>
+  <td>High (but has JS overhead)</td>
+  <td>High (Static files only)</td>
+  <td><strong>Maximum</strong> (Instant first byte SSR)</td>
+</tr>
+</tbody>
+</table>
 <h3 id="why-cluster-lang-outperforms-astro--jekyll">Why Cluster-lang Outperforms Astro & Jekyll:</h3>
 <p>1. <strong>Zero Virtual Machine overhead:</strong> Astro requires the heavy V8 JavaScript Engine, and Jekyll requires the Ruby interpreter. These virtual machines consume significant RAM and require warmup periods. The compiled Cluster <code>.out</code> binary runs directly on the CPU with zero runtime interpreter layers.</p>
 <p>2. <strong>Bare-Metal SSR (Server-Side Rendering):</strong> In Astro, server-side rendering is performed by Node.js, which dynamically evaluates JS files. In Cluster, page assembly is written directly as inline C++ string concatenations compiled into binary assembly instruction codes, letting the server stream HTML responses to clients instantaneously.</p>
@@ -115,14 +155,14 @@ fn get_data() -> ContentData:
 <hr />
 <h2 id="4--fully-working-example">4. Fully Working Example</h2>
 <h3 id="content-file-article-cld">Content File (<code>article.cld</code>)</h3>
-<pre><code class="language-text">title: "Cluster Site Engine"
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-text">title: "Cluster Site Engine"
 date: "July 9, 2026"
 author: "Zk Developer"
 category: "Release"
 ---
-This content is compiled directly into a C++ model.</code></pre>
+This content is compiled directly into a C++ model.</code></pre></div></div>
 <h3 id="layout-template-news-layout-cltp">Layout Template (<code>news_layout.cltp</code>)</h3>
-<pre><code class="language-html"><component name="NewsLayout" title: string, author: string, date: string, category: string, body: string>
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-html"><component name="NewsLayout" title: string, author: string, date: string, category: string, body: string>
     <html>
         <head><title>{title}</title></head>
         <body style="background: #09090e; color: #fff; font-family: sans-serif; padding: 40px;">
@@ -132,9 +172,9 @@ This content is compiled directly into a C++ model.</code></pre>
             <div>{body}</div>
         </body>
     </html>
-</component></code></pre>
+</component></code></pre></div></div>
 <h3 id="application-entrypoint-main-cl">Application Entrypoint (<code>main.cl</code>)</h3>
-<pre><code class="language-python">import "article.cld" as article
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">import "article.cld" as article
 import "news_layout.cltp" as tmpl
 
 fn main():
@@ -148,7 +188,7 @@ fn main():
         art_data.category,
         art_data.body
     )
-    serve_web(8080, html)</code></pre>
+    serve_web(8080, html)</code></pre></div></div>
 <hr />
 <h3 id="chapter-navigation">Chapter Navigation</h3>
 <ul>
@@ -162,6 +202,11 @@ fn main():
     <span>[Interactive Island: Counter]</span>
   </div>
 </cluster-island>
+
+<div class="chapter-nav">
+  <a href="/chapter13.html">&larr; Chapter 13</a>
+  <a href="/chapter15.html">Chapter 15 &rarr;</a>
+</div>
 
         </article>
     </main>

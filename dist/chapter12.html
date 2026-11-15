@@ -15,8 +15,8 @@
     <div class="sidebar-backdrop"></div>
     <nav class="sidebar">
     <div class="sidebar-header">
-        <h1><a href="/index.html" style="color:#fff;text-decoration:none;">The Cluster Book</a></h1>
-        <p>Official Language Guide &middot; <strong>Cluster-SSG</strong></p>
+        <h1><a href="/index.html">The Cluster Book</a></h1>
+        <p>Official Language Guide</p>
     </div>
     <ul class="sidebar-nav">
         <li><a href="/index.html">Home</a></li>
@@ -70,14 +70,14 @@
 <p>Cluster-lang solves this by decoupling the language syntax from the target runtime. The same Cluster-lang codebase compiles into different C++ structures depending on the compiler flags passed.</p>
 <hr />
 <h2 id="2--compilation-targets">2. Compilation Targets</h2>
-<pre><code class="language-mermaid">graph TD
+<div class="language-mermaid highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-mermaid">graph TD
     Source[main.cl Source Code] --> TargetServer[Linux Server Target]
     Source --> TargetMCU[Bare-Metal MCU Target --safe]
     Source --> TargetWASM[Web Browser Target --wasm]
     
     TargetServer --> BinServer[ELF Binary / Web Server]
     TargetMCU --> BinMCU[Arduino / ESP32 / STM32 C++ Code]
-    TargetWASM --> BinWASM[WASM + HTML Payload]</code></pre>
+    TargetWASM --> BinWASM[WASM + HTML Payload]</code></pre></div></div>
 <h3 id="a--enterprise-server-target">A. Enterprise Server Target</h3>
 <p>By default, the compiler outputs full C++20 code utilizing multi-threaded thread pools, raw Linux sockets, and standard database interfaces.</p>
 <ul>
@@ -104,10 +104,10 @@
 <h2 id="3--unified-syntax-for-diverse-hardware">3. Unified Syntax for Diverse Hardware</h2>
 <p>This adaptability allows writing IoT and server systems in a single language.</p>
 <p>For instance, you can define a data payload schema in a shared file:</p>
-<pre><code class="language-python">// shared.cl
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">// shared.cl
 model SensorData:
     id: int
-    value: float</code></pre>
+    value: float</code></pre></div></div>
 <p>And compile it for:</p>
 <p>1.  <strong>The Sensor Chip (Microcontroller):</strong> Reading physical pins and sending values via serial interface in <code>--safe</code> mode.</p>
 <p>2.  <strong>The Edge Gateway (Raspberry Pi/Linux):</strong> Aggregating inputs and serving a dashboard using <code>serve_web</code>.</p>
@@ -125,6 +125,11 @@ model SensorData:
     <span>[Interactive Island: Counter]</span>
   </div>
 </cluster-island>
+
+<div class="chapter-nav">
+  <a href="/chapter11.html">&larr; Chapter 11</a>
+  <a href="/chapter13.html">Chapter 13 &rarr;</a>
+</div>
 
         </article>
     </main>

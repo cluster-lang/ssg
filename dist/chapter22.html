@@ -15,8 +15,8 @@
     <div class="sidebar-backdrop"></div>
     <nav class="sidebar">
     <div class="sidebar-header">
-        <h1><a href="/index.html" style="color:#fff;text-decoration:none;">The Cluster Book</a></h1>
-        <p>Official Language Guide &middot; <strong>Cluster-SSG</strong></p>
+        <h1><a href="/index.html">The Cluster Book</a></h1>
+        <p>Official Language Guide</p>
     </div>
     <ul class="sidebar-nav">
         <li><a href="/index.html">Home</a></li>
@@ -65,7 +65,7 @@
 <hr />
 <h2 id="2--server-class-and-routing">2. Server Class and Routing</h2>
 <p>The primary workhorse is the <code>http::HttpServer</code> class. You register endpoints by attaching lambdas or functions to route methods like <code>.get()</code> and <code>.post()</code>.</p>
-<pre><code class="language-python">server := http::HttpServer()
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">server := http::HttpServer()
 
 server.get("/status", fn(req: http::HttpRequest, res: http::HttpResponse):
     res.set_status(200)
@@ -75,7 +75,7 @@ server.get("/status", fn(req: http::HttpRequest, res: http::HttpResponse):
 server.post("/submit", fn(req: http::HttpRequest, res: http::HttpResponse):
     # Handle submission
     res.set_status(201)
-)</code></pre>
+)</code></pre></div></div>
 <hr />
 <h2 id="3--the-httprequest-structure">3. The HttpRequest Structure</h2>
 <p>The <code>http::HttpRequest</code> object gives you comprehensive access to the incoming client request. Key properties include:</p>
@@ -97,30 +97,65 @@ server.post("/submit", fn(req: http::HttpRequest, res: http::HttpResponse):
 <hr />
 <h2 id="5--secure-servers-https-tls">5. Secure Servers (HTTPS/TLS)</h2>
 <p>For production deployment facing the public web, Cluster includes <code>http::HttpSecureServer</code>. It functions exactly identically to the standard server but requires paths to your TLS/SSL certificates upon initialization.</p>
-<pre><code class="language-python"># Provide cert file and private key file paths
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python"># Provide cert file and private key file paths
 secure_server := http::HttpSecureServer("cert.pem", "key.pem")
 secure_server.get("/", fn(req: http::HttpRequest, res: http::HttpResponse):
     res.set_body("Secure connection established!")
 )
-secure_server.listen("0.0.0.0", 443)</code></pre>
+secure_server.listen("0.0.0.0", 443)</code></pre></div></div>
 <hr />
 <h2 id="6--http-client-functions">6. HTTP Client Functions</h2>
 <p>Cluster isn't just for building servers; it makes external requests trivial with <code>http::get(url)</code> and <code>http::post(url, body)</code>. These synchronous functions immediately return the response body, making them ideal for scraping, webhook triggers, or service-to-service communication.</p>
-<pre><code class="language-python">html := http::get("https://example.com")
-api_response := http::post("https://api.example.com/data", "{\"key\":\"value\"}")</code></pre>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">html := http::get("https://example.com")
+api_response := http::post("https://api.example.com/data", "{\"key\":\"value\"}")</code></pre></div></div>
 <hr />
 <h2 id="7--ecosystem-comparison">7. Ecosystem Comparison</h2>
 <p>Cluster's standard library aims to provide the best balance of speed and usability.</p>
-<p>| Feature | Cluster (<code>http</code>) | Python (Flask) | Node (Express) | Go (<code>net/http</code>) |</p>
-<p>| --- | --- | --- | --- | --- |</p>
-<p>| <strong>Performance</strong> | C++ compiled (Fast) | Interpreted (Slow) | JIT (Medium) | Compiled (Fast) |</p>
-<p>| <strong>Syntax</strong> | Minimal / Pythonic | Decorator-heavy | Callback / Async | Structs & Interfaces |</p>
-<p>| <strong>Concurrency</strong> | Native Multi-threading | GIL Constrained | Single-threaded | Goroutines |</p>
-<p>| <strong>Setup Boilerplate</strong> | Very Low | Low | Low | Medium |</p>
+<table>
+<thead>
+<tr>
+  <th>Feature</th>
+  <th>Cluster (<code>http</code>)</th>
+  <th>Python (Flask)</th>
+  <th>Node (Express)</th>
+  <th>Go (<code>net/http</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Performance</strong></td>
+  <td>C++ compiled (Fast)</td>
+  <td>Interpreted (Slow)</td>
+  <td>JIT (Medium)</td>
+  <td>Compiled (Fast)</td>
+</tr>
+<tr>
+  <td><strong>Syntax</strong></td>
+  <td>Minimal / Pythonic</td>
+  <td>Decorator-heavy</td>
+  <td>Callback / Async</td>
+  <td>Structs & Interfaces</td>
+</tr>
+<tr>
+  <td><strong>Concurrency</strong></td>
+  <td>Native Multi-threading</td>
+  <td>GIL Constrained</td>
+  <td>Single-threaded</td>
+  <td>Goroutines</td>
+</tr>
+<tr>
+  <td><strong>Setup Boilerplate</strong></td>
+  <td>Very Low</td>
+  <td>Low</td>
+  <td>Low</td>
+  <td>Medium</td>
+</tr>
+</tbody>
+</table>
 <hr />
 <h2 id="8--complete-working-example">8. Complete Working Example</h2>
 <p>Below is a complete, executable example demonstrating how to spin up a non-blocking asynchronous web server and immediately consume its API using Cluster's built-in client.</p>
-<pre><code class="language-python">fn start_server(port: int):
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code class="language-python">fn start_server(port: int):
     cpp_inject "std::thread([port]() { http::HttpServer server; server.get(\"/api/hello\", [](http::HttpRequest req, http::HttpResponse res) { res.set_status(200); res.set_body(\"{\\\"message\\\": \\\"Hello from Cluster!\\\"}\"); res.set_header(\"Content-Type\", \"application/json\"); }); server.listen(\"0.0.0.0\", port); }).detach();"
 
 fn main():
@@ -128,7 +163,7 @@ fn main():
     start_server(8080)
     sleep_ms(500)
     response := http::get("http://localhost:8080/api/hello")
-    put response</code></pre>
+    put response</code></pre></div></div>
 <hr />
 <h3 id="chapter-navigation">Chapter Navigation</h3>
 <ul>
@@ -142,6 +177,11 @@ fn main():
     <span>[Interactive Island: Counter]</span>
   </div>
 </cluster-island>
+
+<div class="chapter-nav">
+  <a href="/chapter21.html">&larr; Chapter 21</a>
+  <a href="/chapter23.html">Chapter 23 &rarr;</a>
+</div>
 
         </article>
     </main>

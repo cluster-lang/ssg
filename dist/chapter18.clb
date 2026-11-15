@@ -1,17 +1,17 @@
 CLD/1.0
 META|Chapter 18: Dual-Semantics Ownership & Lifetime Safety|Cluster-lang Team|2026-11-15|chapter|cluster,systems,guide|chapter-18-dual-semantics-ownership--lifetime-safety|
-BLOCKS_COUNT|41
+BLOCKS_COUNT|37
 BLOCK|h1|1|Chapter 18: Dual-Semantics Ownership & Lifetime Safety
 BLOCK|p||Cluster-lang provides a unique, vibrant hybrid memory management system that bridges the gap between Rust-like compile-time ownership safety and C++'s familiar value/copy semantics. This system is called **Dual-Semantics Ownership**.
 BLOCK|p||By default, variables in Cluster-lang use standard C++ copy, assignment, and pass-by-value/pass-by-reference semantics. However, by decorating variables and parameters with ownership qualifiers (`owned`, `borrow`, `mut borrow`), you can opt-in to strict compile-time borrow checker checks on resources, guaranteeing lifetime safety.
 BLOCK|hr||
 BLOCK|h2|2|1. Ownership & Reference Qualifiers
 BLOCK|p||Cluster-lang defines three key type qualifiers for memory safety:
-BLOCK|p||| Qualifier | C++ Mapping | Semantics |
-BLOCK|p||| :--- | :--- | :--- |
-BLOCK|p||| `owned T` | `T` | The variable has exclusive ownership of the resource. Moving it invalidates the original variable. |
-BLOCK|p||| `borrow T` | `const T&` | Read-only borrow. Accesses the resource via a const reference. |
-BLOCK|p||| `mut borrow T` | `T&` | Mutable borrow. Allows in-place mutation of the resource. |
+BLOCK|table||| Qualifier | C++ Mapping | Semantics |
+| :--- | :--- | :--- |
+| `owned T` | `T` | The variable has exclusive ownership of the resource. Moving it invalidates the original variable. |
+| `borrow T` | `const T&` | Read-only borrow. Accesses the resource via a const reference. |
+| `mut borrow T` | `T&` | Mutable borrow. Allows in-place mutation of the resource. |
 BLOCK|p||If no qualifier is specified, the type defaults to standard copy-on-assignment/pass-by-value semantics.
 BLOCK|hr||
 BLOCK|h2|2|2. Compile-Time Move Semantics
