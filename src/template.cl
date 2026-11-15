@@ -87,6 +87,44 @@ fn template_resolve_includes(tr: TemplateRegistry, layout: string) -> string:
         i = i + 1
     return out
 
+fn template_eval_conditional(tmpl: string, key: string, is_present: int) -> string:
+    op_b := "{" + "%"
+    cl_b := "%" + "}"
+    tag_open := op_b + " if " + key + " " + cl_b
+    tag_close := op_b + " endif " + cl_b
+    if cld_contains(tmpl, tag_open) == 0 or cld_contains(tmpl, tag_close) == 0:
+        return tmpl
+    
+    let tlen: int = len(tmpl)
+    let olen: int = len(tag_open)
+    let clen: int = len(tag_close)
+    let mut out: string = ""
+    let mut i: int = 0
+    let mut chunk_start: int = 0
+    
+    while i < tlen:
+        if i + olen <= tlen and substring(tmpl, i, olen) == tag_open:
+            if i > chunk_start:
+                out = out + substring(tmpl, chunk_start, i - chunk_start)
+            let mut close_idx: int = -1
+            let mut ci: int = i + olen
+            while ci + clen <= tlen:
+                if substring(tmpl, ci, clen) == tag_close:
+                    close_idx = ci
+                    break
+                ci = ci + 1
+            if close_idx != -1:
+                if is_present == 1:
+                    inner := substring(tmpl, i + olen, close_idx - (i + olen))
+                    out = out + inner
+                i = close_idx + clen
+                chunk_start = i
+                continue
+        i = i + 1
+    if chunk_start < tlen:
+        out = out + substring(tmpl, chunk_start, tlen - chunk_start)
+    return out
+
 // Full template rendering for an SSG document
 fn template_render_page(tr: TemplateRegistry, doc: SsgDocument, site_name: string, site_tagline: string) -> string:
     layout_name := doc.cld.meta.layout
@@ -97,8 +135,21 @@ fn template_render_page(tr: TemplateRegistry, doc: SsgDocument, site_name: strin
     // 1. Resolve includes
     layout := template_resolve_includes(tr, raw_layout)
     
-    // 2. Variable substitutions
+    // 2. Evaluate conditionals ({% if author %} ... {% endif %})
     let mut res: string = layout
+    let mut has_author: int = 0
+    if len(doc.cld.meta.author) > 0: has_author = 1
+    res = template_eval_conditional(res, "author", has_author)
+
+    let mut has_tags: int = 0
+    if len(doc.cld.meta.tags) > 0: has_tags = 1
+    res = template_eval_conditional(res, "tags", has_tags)
+
+    let mut has_desc: int = 0
+    if len(doc.cld.meta.description) > 0: has_desc = 1
+    res = template_eval_conditional(res, "description", has_desc)
+
+    // 3. Variable substitutions
     res = cld_template_replace(res, "content", doc.html_body)
     res = cld_template_replace(res, "title", doc.cld.meta.title)
     res = cld_template_replace(res, "author", doc.cld.meta.author)

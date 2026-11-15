@@ -60,7 +60,7 @@ Cluster-lang supports the following primitive types:
 The `put` statement outputs values to the console, automatically appending a newline. You can pass variables, literals, or expressions:
 ```python
 put "Hello, Alice!"
-put 42 + 8
+put 42 + 8dist/chapter1.html
 ```
 
 To concatenate strings and print them:

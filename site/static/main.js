@@ -170,3 +170,68 @@ function tokenizeText(text, keywords, types) {
         return escapeHtml(match);
     });
 }
+
+// Interactive Sheet Support (Filter, Sort, Export CSV)
+window.clusterSheetFilter = function(input) {
+    const query = input.value.toLowerCase();
+    const wrapper = input.closest('.cluster-sheet-wrapper');
+    if (!wrapper) return;
+    const rows = wrapper.querySelectorAll('tbody tr');
+    let visible = 0;
+    rows.forEach(function(row) {
+        const text = row.textContent.toLowerCase();
+        if (text.includes(query)) {
+            row.style.display = '';
+            visible++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+    const countEl = wrapper.querySelector('.cluster-sheet-count');
+    if (countEl) countEl.textContent = 'Showing ' + visible + ' of ' + rows.length + ' entries';
+};
+
+window.clusterSheetSort = function(th, colIdx) {
+    const table = th.closest('table');
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    const isAsc = th.dataset.order !== 'asc';
+    th.dataset.order = isAsc ? 'asc' : 'desc';
+    
+    th.closest('tr').querySelectorAll('th .sort-icon').forEach(function(icon) { icon.textContent = '⇅'; });
+    const icon = th.querySelector('.sort-icon');
+    if (icon) icon.textContent = isAsc ? '▲' : '▼';
+
+    rows.sort(function(a, b) {
+        const aCell = a.children[colIdx] ? a.children[colIdx].innerText.trim() : '';
+        const bCell = b.children[colIdx] ? b.children[colIdx].innerText.trim() : '';
+        const aNum = parseFloat(aCell.replace(/[^0-9.-]/g, ''));
+        const bNum = parseFloat(bCell.replace(/[^0-9.-]/g, ''));
+        if (!isNaN(aNum) && !isNaN(bNum)) {
+            return isAsc ? aNum - bNum : bNum - aNum;
+        }
+        return isAsc ? aCell.localeCompare(bCell) : bCell.localeCompare(aCell);
+    });
+
+    rows.forEach(function(r) { tbody.appendChild(r); });
+};
+
+window.clusterSheetExportCSV = function(btn) {
+    const wrapper = btn.closest('.cluster-sheet-wrapper');
+    if (!wrapper) return;
+    const table = wrapper.querySelector('table');
+    let csv = [];
+    table.querySelectorAll('tr').forEach(function(row) {
+        if (row.style.display === 'none') return;
+        const cols = Array.from(row.querySelectorAll('th, td')).map(function(cell) {
+            let text = cell.innerText.replace(/[\u21C5\u25B2\u25BC]/g, '').trim().replace(/"/g, '""').replace(/[\r\n]+/g, ' ');
+            return '"' + text + '"';
+        });
+        csv.push(cols.join(','));
+    });
+    const blob = new Blob([csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = (wrapper.querySelector('.cluster-sheet-title') ? wrapper.querySelector('.cluster-sheet-title').textContent.replace(/[^a-zA-Z0-9_-]/g, '_') : 'sheet') + '.csv';
+    link.click();
+};

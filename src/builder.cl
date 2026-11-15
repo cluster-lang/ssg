@@ -146,6 +146,39 @@ fn builder_compile_chapter(cfg: SsgConfig, tr: TemplateRegistry, islands: Island
 
     return bytes_written
 
+fn ssg_scan_cld_dir(dir_path: string) -> vector[string]:
+    tmp_file := ".ssg_scan.tmp"
+    sys_run("ls -1 " + dir_path + "/*.cld 2>/dev/null > " + tmp_file)
+    let mut files: vector[string] = []
+    if file_exists(tmp_file) == 1:
+        content := file_read(tmp_file)
+        lines := cld_split(content, "\n")
+        let mut i: int = 0
+        while i < len(lines):
+            line := cld_trim(lines[i])
+            if len(line) > 0:
+                files.push(line)
+            i = i + 1
+        sys_run("rm -f " + tmp_file)
+    return files
+
+fn ssg_extract_filename(full_path: string) -> string:
+    let plen: int = len(full_path)
+    let mut slash_idx: int = -1
+    let mut i: int = plen - 1
+    while i >= 0:
+        if char_at(full_path, i) == "/":
+            slash_idx = i
+            break
+        i = i - 1
+    let mut name: string = full_path
+    if slash_idx != -1:
+        name = substring(full_path, slash_idx + 1, plen - (slash_idx + 1))
+    let nlen: int = len(name)
+    if nlen > 4 and substring(name, nlen - 4, 4) == ".cld":
+        return substring(name, 0, nlen - 4)
+    return name
+
 fn builder_run_all(cfg: SsgConfig) -> BuildReport:
     tr := builder_init_templates(cfg)
     islands := islands_registry_new()
@@ -154,50 +187,87 @@ fn builder_run_all(cfg: SsgConfig) -> BuildReport:
     let mut total_bytes: int = 0
     let mut total_bins: int = 0
 
-    // Standard static pages
-    pages := [
-        "index",
-        "about",
-        "docs"
-    ]
+    // Dynamic Chapter Count Discovery (no hardcoding)
+    let mut total_chapters: int = 0
+    let mut ci_check: int = 1
+    while ci_check <= 1000:
+        ch_test := cfg.site_dir + "/pages/chapter" + str(ci_check) + ".cld"
+        if file_exists(ch_test) == 1:
+            total_chapters = total_chapters + 1
+            ci_check = ci_check + 1
+        else:
+            break
 
-    let mut pi: int = 0
-    while pi < len(pages):
-        page_name := pages[pi]
-        src_path := cfg.site_dir + "/pages/" + page_name + ".cld"
-        out_path := cfg.dist_dir + "/" + page_name + ".html"
-        
-        if file_exists(src_path) == 1:
-            bytes := builder_compile_page(cfg, tr, islands, src_path, out_path)
-            total_bytes = total_bytes + bytes
-            total_pages = total_pages + 1
-            if cfg.output_binary == 1:
-                total_bins = total_bins + 1
-        pi = pi + 1
-
-    // Dynamic 32-Chapter Compilation for The Cluster Book
+    // 1. Dynamic Chapter Compilation with Previous / Next Navigation
     let mut ci: int = 1
-    while ci <= 32:
+    while ci <= total_chapters:
         ch_name := "chapter" + str(ci)
         src_path := cfg.site_dir + "/pages/" + ch_name + ".cld"
         out_path := cfg.dist_dir + "/" + ch_name + ".html"
         if file_exists(src_path) == 1:
-            bytes := builder_compile_chapter(cfg, tr, islands, src_path, out_path, ci, 32)
+            bytes := builder_compile_chapter(cfg, tr, islands, src_path, out_path, ci, total_chapters)
             total_bytes = total_bytes + bytes
             total_pages = total_pages + 1
             if cfg.output_binary == 1:
                 total_bins = total_bins + 1
         ci = ci + 1
 
-    // Blog / Posts
-    post_src := cfg.site_dir + "/posts/hello-cluster-ssg.cld"
-    post_out := cfg.dist_dir + "/hello-cluster-ssg.html"
-    if file_exists(post_src) == 1:
+    // 2. Dynamic Discovery & Compilation of Standard Pages (index, about, docs, etc.)
+    page_files := ssg_scan_cld_dir(cfg.site_dir + "/pages")
+    let mut pi: int = 0
+    while pi < len(page_files):
+        p_path := page_files[pi]
+        slug := ssg_extract_filename(p_path)
+        if cld_starts_with(slug, "chapter") == 0:
+            out_path := cfg.dist_dir + "/" + slug + ".html"
+            bytes := builder_compile_page(cfg, tr, islands, p_path, out_path)
+            total_bytes = total_bytes + bytes
+            total_pages = total_pages + 1
+            if cfg.output_binary == 1:
+                total_bins = total_bins + 1
+        pi = pi + 1
+
+    // 3. Dynamic Discovery & Compilation of Blog Posts
+    post_files := ssg_scan_cld_dir(cfg.site_dir + "/posts")
+    let mut pfi: int = 0
+    while pfi < len(post_files):
+        post_src := post_files[pfi]
+        post_slug := ssg_extract_filename(post_src)
+        post_out := cfg.dist_dir + "/" + post_slug + ".html"
         bytes := builder_compile_page(cfg, tr, islands, post_src, post_out)
         total_bytes = total_bytes + bytes
         total_pages = total_pages + 1
         if cfg.output_binary == 1:
             total_bins = total_bins + 1
+        pfi = pfi + 1
+
+    // 4. Tag Archives Generation (/tags/<tag>.html)
+    sys_run("mkdir -p " + cfg.dist_dir + "/tags")
+    tags := ["cluster", "systems", "compiler", "guide", "concurrency", "performance"]
+    let mut ti: int = 0
+    while ti < len(tags):
+        tag_name := tags[ti]
+        tag_out := cfg.dist_dir + "/tags/" + tag_name + ".html"
+        let mut tag_body: string = "<h1>Tag Archive: #" + tag_name + "</h1>\n"
+        tag_body = tag_body + "<p>Browse all chapters and documentation tagged with <strong>" + tag_name + "</strong>.</p><hr />\n"
+        tag_body = tag_body + "<div class=\"chapter-grid\">\n"
+        
+        let mut tci: int = 1
+        while tci <= total_chapters:
+            tag_body = tag_body + "  <a class=\"chapter-card\" href=\"/chapter" + str(tci) + ".html\">\n"
+            tag_body = tag_body + "    <div class=\"card-num\">Chapter " + str(tci) + "</div>\n"
+            tag_body = tag_body + "    <div class=\"card-title\">Tagged with #" + tag_name + "</div>\n"
+            tag_body = tag_body + "  </a>\n"
+            tci = tci + 1
+        tag_body = tag_body + "</div>\n"
+        
+        tag_cld := CldDoc(cld_meta_new("Tag: #" + tag_name, "default"), [], [])
+        tag_doc := SsgDocument(tag_cld, tag_body, tag_out)
+        tag_html := template_render_page(tr, tag_doc, cfg.site_name, cfg.site_tagline)
+        file_write(tag_out, tag_html)
+        total_bytes = total_bytes + len(tag_html)
+        total_pages = total_pages + 1
+        ti = ti + 1
 
     // Static Assets
     sys_run("mkdir -p " + cfg.dist_dir + "/static")
@@ -231,12 +301,39 @@ fn builder_run_all(cfg: SsgConfig) -> BuildReport:
     sitemap = sitemap + "  <url><loc>" + cfg.base_url + "/hello-cluster-ssg.html</loc><priority>0.7</priority></url>\n"
 
     let mut si: int = 1
-    while si <= 32:
+    while si <= total_chapters:
         sitemap = sitemap + "  <url><loc>" + cfg.base_url + "/chapter" + str(si) + ".html</loc><priority>0.9</priority></url>\n"
         si = si + 1
 
     sitemap = sitemap + "</urlset>\n"
     file_write(sitemap_path, sitemap)
     total_bytes = total_bytes + len(sitemap)
+
+    // Generate RSS 2.0 Feed (feed.xml)
+    feed_path := cfg.dist_dir + "/feed.xml"
+    let mut feed: string = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<rss version=\"2.0\" xmlns:atom=\"http://www.w3.org/2005/Atom\">\n"
+    feed = feed + "  <channel>\n"
+    feed = feed + "    <title>" + cfg.site_name + "</title>\n"
+    feed = feed + "    <link>" + cfg.base_url + "</link>\n"
+    feed = feed + "    <description>" + cfg.site_tagline + "</description>\n"
+    feed = feed + "    <atom:link href=\"" + cfg.base_url + "/feed.xml\" rel=\"self\" type=\"application/rss+xml\" />\n"
+    feed = feed + "    <item>\n"
+    feed = feed + "      <title>The Cluster Book &mdash; Official Guide</title>\n"
+    feed = feed + "      <link>" + cfg.base_url + "/</link>\n"
+    feed = feed + "      <description>" + cfg.site_tagline + "</description>\n"
+    feed = feed + "    </item>\n"
+
+    let mut fi: int = 1
+    while fi <= total_chapters:
+        feed = feed + "    <item>\n"
+        feed = feed + "      <title>Cluster-lang: Chapter " + str(fi) + "</title>\n"
+        feed = feed + "      <link>" + cfg.base_url + "/chapter" + str(fi) + ".html</link>\n"
+        feed = feed + "      <description>The Cluster Book documentation Chapter " + str(fi) + "</description>\n"
+        feed = feed + "    </item>\n"
+        fi = fi + 1
+
+    feed = feed + "  </channel>\n</rss>\n"
+    file_write(feed_path, feed)
+    total_bytes = total_bytes + len(feed)
 
     return BuildReport(total_pages, total_bins, 1, total_bytes)
