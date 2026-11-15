@@ -2,7 +2,7 @@
   "site_name": "Cluster SSG",
   "tagline": "Next-Gen Blazing Fast Static Site Generator",
   "base_url": "http://localhost:3000",
-  "total_chapters": 32,
+  "total_chapters": 0,
   "generator": "cluster-ssg",
   "version": "1.0.0"
 }

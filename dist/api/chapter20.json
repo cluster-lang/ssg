@@ -1,8 +1,0 @@
-{
-  "id": 20,
-  "slug": "chapter20",
-  "title": "Chapter 20: Inline Assembly & SIMD Vector Intrinsics",
-  "url": "/chapter20.html",
-  "tags": "cluster,systems,guide",
-  "description": "The Cluster Book documentation Chapter 20"
-}
