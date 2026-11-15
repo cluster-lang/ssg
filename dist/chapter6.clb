@@ -1,0 +1,62 @@
+CLD/1.0
+META|Cluster-lang: Chapter 6 — Async Programming & Metaprogramming|Cluster-lang Team|2026-11-15|chapter|cluster,systems,guide|cluster-lang-chapter-6--async-programming--metaprogramming|
+BLOCKS_COUNT|34
+BLOCK|h1|1|Cluster-lang: Chapter 6 — Async Programming & Metaprogramming
+BLOCK|p||This chapter covers asynchronous programming (`async`/`await`), decorators, and reflection in Cluster-lang.
+BLOCK|hr||
+BLOCK|h2|2|1. Asynchronous Programming (`async` / `await`)
+BLOCK|p||For high-throughput, non-blocking I/O tasks, Cluster-lang provides async coroutines.
+BLOCK|h3|3|Defining Async Functions
+BLOCK|p||Define an async function by prefixing it with the `async` keyword:
+BLOCK|code|python|async fn fetch_data(url: string) -> string:
+    // Simulated network I/O
+    delay(100)
+    return "Data from " + url
+BLOCK|h3|3|Awaiting Async Functions
+BLOCK|p||To suspend execution until an async task finishes, use the `await` keyword:
+BLOCK|code|python|fn main():
+    task := fetch_data("https://api.example.com")
+    result := await task
+    put result
+BLOCK|p||Under the hood, async operations are transpiled to cooperative C++ futures and coroutines using modern C++20 `std::coroutine`.
+BLOCK|hr||
+BLOCK|h2|2|2. Metaprogramming & Decorators
+BLOCK|p||Decorators allow you to modify or monitor the behavior of functions and models at compile-time or runtime.
+BLOCK|h3|3|Using Decorators
+BLOCK|p||Decorators are prefixed with the `@` symbol and placed directly above function declarations:
+BLOCK|code|python|@log_execution
+fn process(data: int) -> int:
+    return data * 2
+BLOCK|h3|3|Property Descriptors
+BLOCK|p||You can use decorators to attach properties, getters, or setters to model fields:
+BLOCK|code|python|model Product:
+    @readonly
+    id: int
+    
+    @property
+    price: float
+BLOCK|hr||
+BLOCK|h2|2|3. Reflection & Introspection
+BLOCK|p||Cluster-lang provides metadata introspection capabilities so program structures can query their own attributes at runtime.
+BLOCK|h3|3|Inspecting Models
+BLOCK|p||You can retrieve the name, fields, and types of fields on any model instance:
+BLOCK|code|python|model User:
+    name: string
+    age: int
+
+fn main():
+    u := box User(name="Alice", age=30)
+    
+    // Introspection query
+    put u.__name__            // Prints "User"
+    put u.__fields__          // Prints ["name", "age"]
+BLOCK|p||This is extremely useful for building automatic JSON serializers/deserializers, database ORMs, and loggers.
+BLOCK|hr||
+BLOCK|h3|3|Chapter Navigation
+BLOCK|list||[← Chapter 5](/chapter5.html)
+BLOCK|list||[Chapter 7 →](/chapter7.html)
+BLOCK|list||[Back to Table of Contents](/index.html)
+BLOCK|island|load|count="6"|Counter
+ISLANDS_COUNT|1
+ISLAND|Counter|load|count="6"|
+END_CLD

@@ -1,67 +1,212 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Next-Gen Ultra-Fast Static Site Generator - Cluster SSG</title>
-  <link rel="stylesheet" href="/static/style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Cluster Book — Official Language Guide - The Cluster Book</title>
+    <meta name="description" content="Learn Cluster-lang from the ground up. A high-performance systems language with Pythonic readability and C++ execution speed.">
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <header class="site-header">
-  <div class="container nav-wrapper">
-    <a href="/index.html" class="brand">
-      <span class="logo-icon">⚡</span>
-      <span class="brand-text">Cluster<strong>SSG</strong></span>
-    </a>
-    <nav class="nav-menu">
-      <a href="/index.html">Home</a>
-      <a href="/about.html">About</a>
-      <a href="/docs.html">Docs</a>
-      <a href="/hello-cluster-ssg.html">Blog</a>
-      <span class="badge-zero-js">0kb JS</span>
-    </nav>
-  </div>
-</header>
+    <header class="mobile-header">
+        <a href="/index.html" class="mobile-logo">The Cluster Book</a>
+        <button class="mobile-toggle" aria-label="Toggle navigation">☰</button>
+    </header>
+    <div class="sidebar-backdrop"></div>
+    <nav class="sidebar">
+    <div class="sidebar-header">
+        <h1><a href="/index.html" style="color:#fff;text-decoration:none;">The Cluster Book</a></h1>
+        <p>Official Language Guide &middot; <strong>Cluster-SSG</strong></p>
+    </div>
+    <ul class="sidebar-nav">
+        <li><a href="/index.html">Home</a></li>
+        <li><a href="/chapter1.html"><span class="chapter-num">01</span> The Basics</a></li>
+        <li><a href="/chapter2.html"><span class="chapter-num">02</span> Control Flow & Functions</a></li>
+        <li><a href="/chapter3.html"><span class="chapter-num">03</span> Models & Object Orientation</a></li>
+        <li><a href="/chapter4.html"><span class="chapter-num">04</span> Memory Safety & Ownership</a></li>
+        <li><a href="/chapter5.html"><span class="chapter-num">05</span> Concurrency & Channels</a></li>
+        <li><a href="/chapter6.html"><span class="chapter-num">06</span> Async Programming & Metaprogramming</a></li>
+        <li><a href="/chapter7.html"><span class="chapter-num">07</span> Database & Table Queries</a></li>
+        <li><a href="/chapter8.html"><span class="chapter-num">08</span> Tensor Math & Hardware Peripherals</a></li>
+        <li><a href="/chapter9.html"><span class="chapter-num">09</span> AI-First Compiler Features</a></li>
+        <li><a href="/chapter10.html"><span class="chapter-num">10</span> Custom Frontend & Backend File Extensions</a></li>
+        <li><a href="/chapter11.html"><span class="chapter-num">11</span> Modular Web Development & High-Speed SSR</a></li>
+        <li><a href="/chapter12.html"><span class="chapter-num">12</span> Machine Adaptability</a></li>
+        <li><a href="/chapter13.html"><span class="chapter-num">13</span> Vector Space Mapping & Controllable UI Components</a></li>
+        <li><a href="/chapter14.html"><span class="chapter-num">14</span> High-Performance Site Generation & Native Releases</a></li>
+        <li><a href="/chapter15.html"><span class="chapter-num">15</span> Native AI Primitives & Compilation Secrecy</a></li>
+        <li><a href="/chapter16.html"><span class="chapter-num">16</span> The Cluster-Jekyll Hybrid Compiler Bridge</a></li>
+        <li><a href="/chapter17.html"><span class="chapter-num">17</span> AI/ML Training and High-Performance Tensor Operations</a></li>
+        <li><a href="/chapter18.html"><span class="chapter-num">18</span> Dual-Semantics Ownership & Lifetime Safety</a></li>
+        <li><a href="/chapter19.html"><span class="chapter-num">19</span> Zero-Overhead Traits & C++20 Concept Constraints</a></li>
+        <li><a href="/chapter20.html"><span class="chapter-num">20</span> Inline Assembly & SIMD Vector Intrinsics</a></li>
+        <li><a href="/chapter21.html"><span class="chapter-num">21</span> Custom Memory Allocators</a></li>
+        <li><a href="/chapter22.html"><span class="chapter-num">22</span> Production HTTP & HTTPS Web Stack</a></li>
+        <li><a href="/chapter23.html"><span class="chapter-num">23</span> Pattern Matching, Channel Select & Defer</a></li>
+        <li><a href="/chapter24.html"><span class="chapter-num">24</span> Cluster Containers (clc) & Vacuum Sandboxing</a></li>
+        <li><a href="/chapter25.html"><span class="chapter-num">25</span> Bootstrapping a Custom Operating System (Cluster OS)</a></li>
+        <li><a href="/chapter26.html"><span class="chapter-num">26</span> Cybersecurity, Memory Manipulation & Live Dynamic Hot-Patching</a></li>
+        <li><a href="/chapter27.html"><span class="chapter-num">27</span> Static Binary File Patching & Rewriting</a></li>
+        <li><a href="/chapter28.html"><span class="chapter-num">28</span> Ultra-Token-Efficient Developer Ergonomics</a></li>
+        <li><a href="/chapter29.html"><span class="chapter-num">29</span> Systems Memory Freedom & Raw Pointers</a></li>
+        <li><a href="/chapter30.html"><span class="chapter-num">30</span> Zero-Glue C/C++ Interoperability & Native Math</a></li>
+        <li><a href="/chapter31.html"><span class="chapter-num">31</span> Native Multi-Dimensional Tensors & SIMD Matrix Math</a></li>
+        <li><a href="/chapter32.html"><span class="chapter-num">32</span> Zero-Training AI Model Weight Surgery (SafeTensors & GGUF)</a></li>
+    </ul>
+</nav>
 
-  <main class="container">
-    <h1 id="welcome-to-cluster-ssg-">Welcome to Cluster-SSG ⚡</h1>
-<p>Cluster-SSG is a <strong>next-generation Static Site Generator</strong> written in <strong>100% Pure Cluster Language</strong> with zero external dependencies.</p>
-<p>It unifies the three best concepts from modern web engineering:</p>
-<ul>
-  <li><strong>Jekyll Conventions:</strong> Clean directories, intuitive frontmatter headers, and layout inheritance.</li>
-  <li><strong>Hugo Speed:</strong> Single-pass compiler generating over 25,000 pages per second natively via LLVM.</li>
-  <li><strong>Astro Islands Architecture:</strong> Zero JavaScript overhead by default, with selective client hydration only where interactivity is required.</li>
-</ul>
-<hr />
-<h2 id="interactive-island-component-demo">Interactive Island Component Demo</h2>
-<p>Below is an interactive Astro-style component island rendered directly from <code>.cld</code> using <code>client:load</code>:</p>
-<cluster-island data-island="Counter" data-client="load" count="0">
-  <!-- Astro-style Island Component: Counter (load) -->
-  <div class="cluster-island-placeholder" id="island-counter">
-    <span>[Interactive Island: Counter]</span>
+    <main class="main-content">
+        <div class="hero-section">
+  <h1>The Cluster Book 📖</h1>
+<p><p>The official documentation and language guide for <strong>Cluster-lang</strong> — a high-performance systems language with Pythonic readability, C++ execution speed, and compile-time memory safety.</p></p>
+  <div style="margin: 20px 0;">
+<cluster-island data-island="ThemeToggle" data-client="idle" >
+  <!-- Astro-style Island Component: ThemeToggle (idle) -->
+  <div class="cluster-island-placeholder" id="island-themetoggle">
+    <span>[Interactive Island: ThemeToggle]</span>
   </div>
 </cluster-island>
-<p>Notice that the rest of this page contains <strong>0 bytes of JavaScript</strong>. Only the isolated Counter island hydrates on the client!</p>
-<hr />
-<h2 id="native--cld-document--binary-wire-security">Native .cld Document & Binary Wire Security</h2>
-<p>Cluster-SSG replaces slow, unparsed Markdown and JSON with <strong>native <code>.cld</code> (Cluster Document)</strong> and <strong><code>.clb</code> (Cluster Binary Bundle)</strong> formats.</p>
-<blockquote><strong>Default Page Code Security:</strong></blockquote>
-<blockquote>When running with <code>--binary</code>, Cluster-SSG streams pre-compiled binary bytecode bundles over the wire. Web scrapers and bots cannot read your templates or source code—pages are safely decoded directly in the browser!</blockquote>
-<pre><code class="language-cluster">// Example of native .cld document structure
-title: High Performance Web
-author: Alamgir ZK
-layout: post
-===
-# Pure Speed
-Compiled in 0.1ms directly to LLVM machine code.</code></pre>
-
-  </main>
-  <footer class="site-footer">
-  <div class="container footer-content">
-    <p>&copy; 2026 Cluster SSG &middot; Powered by <strong>Pure Cluster Language</strong> (Zero External Dependencies).</p>
-    <p class="footer-sub">Astro Islands &middot; Jekyll Simplicity &middot; Hugo Build Speed &middot; Native .cld Binary Bundles</p>
   </div>
-</footer>
+</div>
+<hr>
+<h2>All 32 Official Chapters</h2>
+<h1>The Cluster Book</h1>
+<p><p>The official documentation and language guide for <strong>Cluster-lang</strong> — a high-performance systems language with Pythonic readability, C++ execution speed, and compile-time memory safety.</p></p>
+<hr>
+<h2>Chapters</h2>
+<div class="chapter-grid">
+    <a class="chapter-card" href="/chapter1.html">
+        <div class="card-num">Chapter 1</div>
+        <div class="card-title">The Basics</div>
+    </a>
+    <a class="chapter-card" href="/chapter2.html">
+        <div class="card-num">Chapter 2</div>
+        <div class="card-title">Control Flow & Functions</div>
+    </a>
+    <a class="chapter-card" href="/chapter3.html">
+        <div class="card-num">Chapter 3</div>
+        <div class="card-title">Models & Object Orientation</div>
+    </a>
+    <a class="chapter-card" href="/chapter4.html">
+        <div class="card-num">Chapter 4</div>
+        <div class="card-title">Memory Safety & Ownership</div>
+    </a>
+    <a class="chapter-card" href="/chapter5.html">
+        <div class="card-num">Chapter 5</div>
+        <div class="card-title">Concurrency & Channels</div>
+    </a>
+    <a class="chapter-card" href="/chapter6.html">
+        <div class="card-num">Chapter 6</div>
+        <div class="card-title">Async Programming & Metaprogramming</div>
+    </a>
+    <a class="chapter-card" href="/chapter7.html">
+        <div class="card-num">Chapter 7</div>
+        <div class="card-title">Database & Table Queries</div>
+    </a>
+    <a class="chapter-card" href="/chapter8.html">
+        <div class="card-num">Chapter 8</div>
+        <div class="card-title">Tensor Math & Hardware Peripherals</div>
+    </a>
+    <a class="chapter-card" href="/chapter9.html">
+        <div class="card-num">Chapter 9</div>
+        <div class="card-title">AI-First Compiler Features</div>
+    </a>
+    <a class="chapter-card" href="/chapter10.html">
+        <div class="card-num">Chapter 10</div>
+        <div class="card-title">Custom Frontend & Backend File Extensions</div>
+    </a>
+    <a class="chapter-card" href="/chapter11.html">
+        <div class="card-num">Chapter 11</div>
+        <div class="card-title">Modular Web Development & High-Speed SSR</div>
+    </a>
+    <a class="chapter-card" href="/chapter12.html">
+        <div class="card-num">Chapter 12</div>
+        <div class="card-title">Machine Adaptability</div>
+    </a>
+    <a class="chapter-card" href="/chapter13.html">
+        <div class="card-num">Chapter 13</div>
+        <div class="card-title">Vector Space Mapping & Controllable UI Components</div>
+    </a>
+    <a class="chapter-card" href="/chapter14.html">
+        <div class="card-num">Chapter 14</div>
+        <div class="card-title">High-Performance Site Generation & Native Releases</div>
+    </a>
+    <a class="chapter-card" href="/chapter15.html">
+        <div class="card-num">Chapter 15</div>
+        <div class="card-title">Native AI Primitives & Compilation Secrecy</div>
+    </a>
+    <a class="chapter-card" href="/chapter16.html">
+        <div class="card-num">Chapter 16</div>
+        <div class="card-title">The Cluster-Jekyll Hybrid Compiler Bridge</div>
+    </a>
+    <a class="chapter-card" href="/chapter17.html">
+        <div class="card-num">Chapter 17</div>
+        <div class="card-title">AI/ML Training and High-Performance Tensor Operations</div>
+    </a>
+    <a class="chapter-card" href="/chapter18.html">
+        <div class="card-num">Chapter 18</div>
+        <div class="card-title">Dual-Semantics Ownership & Lifetime Safety</div>
+    </a>
+    <a class="chapter-card" href="/chapter19.html">
+        <div class="card-num">Chapter 19</div>
+        <div class="card-title">Zero-Overhead Traits & C++20 Concept Constraints</div>
+    </a>
+    <a class="chapter-card" href="/chapter20.html">
+        <div class="card-num">Chapter 20</div>
+        <div class="card-title">Inline Assembly & SIMD Vector Intrinsics</div>
+    </a>
+    <a class="chapter-card" href="/chapter21.html">
+        <div class="card-num">Chapter 21</div>
+        <div class="card-title">Custom Memory Allocators</div>
+    </a>
+    <a class="chapter-card" href="/chapter22.html">
+        <div class="card-num">Chapter 22</div>
+        <div class="card-title">Production HTTP & HTTPS Web Stack</div>
+    </a>
+    <a class="chapter-card" href="/chapter23.html">
+        <div class="card-num">Chapter 23</div>
+        <div class="card-title">Pattern Matching, Channel Select & Defer</div>
+    </a>
+    <a class="chapter-card" href="/chapter24.html">
+        <div class="card-num">Chapter 24</div>
+        <div class="card-title">Cluster Containers (clc) & Vacuum Sandboxing</div>
+    </a>
+    <a class="chapter-card" href="/chapter25.html">
+        <div class="card-num">Chapter 25</div>
+        <div class="card-title">Bootstrapping a Custom Operating System (Cluster OS)</div>
+    </a>
+    <a class="chapter-card" href="/chapter26.html">
+        <div class="card-num">Chapter 26</div>
+        <div class="card-title">Cybersecurity, Memory Manipulation & Live Dynamic Hot-Patching</div>
+    </a>
+    <a class="chapter-card" href="/chapter27.html">
+        <div class="card-num">Chapter 27</div>
+        <div class="card-title">Static Binary File Patching & Rewriting</div>
+    </a>
+    <a class="chapter-card" href="/chapter28.html">
+        <div class="card-num">Chapter 28</div>
+        <div class="card-title">Ultra-Token-Efficient Developer Ergonomics</div>
+    </a>
+    <a class="chapter-card" href="/chapter29.html">
+        <div class="card-num">Chapter 29</div>
+        <div class="card-title">Systems Memory Freedom & Raw Pointers</div>
+    </a>
+    <a class="chapter-card" href="/chapter30.html">
+        <div class="card-num">Chapter 30</div>
+        <div class="card-title">Zero-Glue C/C++ Interoperability & Native Math</div>
+    </a>
+    <a class="chapter-card" href="/chapter31.html">
+        <div class="card-num">Chapter 31</div>
+        <div class="card-title">Native Multi-Dimensional Tensors & SIMD Matrix Math</div>
+    </a>
+    <a class="chapter-card" href="/chapter32.html">
+        <div class="card-num">Chapter 32</div>
+        <div class="card-title">Zero-Training AI Model Weight Surgery (SafeTensors & GGUF)</div>
+    </a>
+</div>
 
+    </main>
+    <script src="/static/main.js"></script>
+    <script src="/static/cluster-island.js"></script>
 </body>
 </html>

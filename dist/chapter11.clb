@@ -1,0 +1,79 @@
+CLD/1.0
+META|Cluster-lang: Chapter 11 — Modular Web Development & High-Speed SSR|Cluster-lang Team|2026-11-15|chapter|cluster,systems,guide|cluster-lang-chapter-11--modular-web-development--high-speed-ssr|
+BLOCKS_COUNT|29
+BLOCK|h1|1|Cluster-lang: Chapter 11 — Modular Web Development & High-Speed SSR
+BLOCK|p||This chapter introduces the design patterns and structures used to build modular, maintainable, and blistering fast web applications in Cluster-lang.
+BLOCK|hr||
+BLOCK|h2|2|1. The Modular Web Design Pattern
+BLOCK|p||In modern web development, separating styling (CSS), behavior (JavaScript), and markup (HTML) is essential for code maintainability. In Cluster-lang, this separation does not come with a performance cost.
+BLOCK|p||By utilizing `.clx` UI templates, you can isolate CSS, JS, and HTML into dedicated components. At compile-time, the Cluster compiler translates these modules into inline C++ functions. At runtime, the server assembles them in memory within nanoseconds.
+BLOCK|hr||
+BLOCK|h2|2|2. Setting Up Components
+BLOCK|h3|3|CSS Module (`styles.clx`)
+BLOCK|p||You can define your global styling and page layouts inside a CSS template:
+BLOCK|code|html|<component name="GetAppStyles">
+    body {
+        background: linear-gradient(135deg, #1e1e2f, #111119);
+        color: #ffffff;
+        font-family: 'Inter', sans-serif;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+    }
+    .btn {
+        background: #00ffcc;
+        color: #111119;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: bold;
+    }
+</component>
+BLOCK|h3|3|JavaScript Module (`scripts.clx`)
+BLOCK|p||You can isolate interactive scripts and client-side logic:
+BLOCK|code|html|<component name="GetClientScripts">
+    function onAction() {
+        console.log("[Cluster Client] Action triggered!");
+        alert("Hello from the browser!");
+    }
+</component>
+BLOCK|hr||
+BLOCK|h2|2|3. Assembling the Application (`main.cl`)
+BLOCK|p||You import your modules using namespace aliases and concatenate them into your final response template:
+BLOCK|code|python|import "styles.clx" as css
+import "scripts.clx" as js
+
+fn main():
+    // Assemble the complete page at C++ memory speeds
+    html := "<html>" +
+            "<head>" +
+                "<title>Modular Cluster App</title>" +
+                "<style>" + css.GetAppStyles() + "</style>" +
+            "</head>" +
+            "<body>" +
+                "<h1>Welcome to Cluster Web</h1>" +
+                "<button class='btn' onclick='onAction()'>Click Me</button>" +
+                "<script>" + js.GetClientScripts() + "</script>" +
+            "</body>" +
+            "</html>"
+
+    put "[Cluster] Starting Web Server..."
+    put "[Cluster] Access the application in your browser at: http://localhost:8080"
+    serve_web(8080, html)
+BLOCK|hr||
+BLOCK|h2|2|4. Why This Architecture Outperforms the Market
+BLOCK|p||1. **Zero Disk I/O at Runtime:** Traditional servers (Node.js, Python, PHP) read HTML/CSS template files from disk or parse them at runtime. Cluster compiles everything into static C++ string literals in the code segment.
+BLOCK|p||2. **Nanosecond SSR Assembly:** Concatenating the HTML segments compiles to native C++ `std::string` addition (utilizing CPU `memcpy` under the hood), taking sub-microseconds.
+BLOCK|p||3. **No Virtual Machine Overhead:** The entire server compiles to a native ELF binary executing directly on the OS kernel with minimal CPU cycles and zero garbage collection sweeps.
+BLOCK|hr||
+BLOCK|h3|3|Chapter Navigation
+BLOCK|list||[← Chapter 10](/chapter10.html)
+BLOCK|list||[Chapter 12 →](/chapter12.html)
+BLOCK|list||[Back to Table of Contents](/index.html)
+BLOCK|island|load|count="11"|Counter
+ISLANDS_COUNT|1
+ISLAND|Counter|load|count="11"|
+END_CLD

@@ -1,0 +1,49 @@
+CLD/1.0
+META|Cluster-lang: Chapter 5 — Concurrency & Channels|Cluster-lang Team|2026-11-15|chapter|cluster,systems,guide|cluster-lang-chapter-5--concurrency--channels|
+BLOCKS_COUNT|27
+BLOCK|h1|1|Cluster-lang: Chapter 5 — Concurrency & Channels
+BLOCK|p||Cluster-lang supports high-performance concurrency through lightweight green threads and copyable thread-safe communication channels.
+BLOCK|hr||
+BLOCK|h2|2|1. Spawning Green Threads (`spawn`)
+BLOCK|p||Green threads (lightweight fibers) are spawned using the `spawn` keyword. They run asynchronously on the compiler's worker thread pool.
+BLOCK|h3|3|Spawning a Function
+BLOCK|code|python|fn calculate(id: int):
+    put "Task started:"
+    put id
+
+fn main():
+    spawn calculate(1)      // Run calculate(1) asynchronously
+    spawn calculate(2)      // Run calculate(2) asynchronously
+BLOCK|h3|3|Spawning a Block of Code
+BLOCK|p||You can also spawn an inline block of code using `spawn:` statement:
+BLOCK|code|python|fn main():
+    spawn:
+        put "Task runs in thread pool"
+BLOCK|hr||
+BLOCK|h2|2|2. Channels (`Channel[T]`)
+BLOCK|p||Channels allow safe, synchronized data communication between different green threads without race conditions.
+BLOCK|h3|3|Declaring a Channel
+BLOCK|p||Declare a channel by specifying the generic type parameters and capacity:
+BLOCK|code|python|ch := Channel[int](10)      // Channel holding integers, capacity = 10
+BLOCK|h3|3|Sending and Receiving Data
+BLOCK|list||`ch.send(value)`: Sends data into the channel (blocks if the channel capacity is full).
+BLOCK|list||`ch.recv()`: Receives data from the channel (blocks if no data is available).
+BLOCK|code|python|fn worker(ch: Channel[int]):
+    ch.send(42)            // Sends 42 into the channel
+
+fn main():
+    ch := Channel[int](5)
+    spawn worker(ch)
+    
+    val := ch.recv()       // Blocks until data is received
+    put val                // Prints 42
+BLOCK|p||Channels are pass-by-value/copyable safe and reference-counted under the hood, making them safe to copy and pass to spawned lambdas.
+BLOCK|hr||
+BLOCK|h3|3|Chapter Navigation
+BLOCK|list||[← Chapter 4](/chapter4.html)
+BLOCK|list||[Chapter 6 →](/chapter6.html)
+BLOCK|list||[Back to Table of Contents](/index.html)
+BLOCK|island|load|count="5"|Counter
+ISLANDS_COUNT|1
+ISLAND|Counter|load|count="5"|
+END_CLD

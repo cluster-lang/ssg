@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - The Cluster Book</title>
+    <meta name="description" content="{{ description }}">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <header class="mobile-header">
+        <a href="/index.html" class="mobile-logo">The Cluster Book</a>
+        <button class="mobile-toggle" aria-label="Toggle navigation">☰</button>
+    </header>
+    <div class="sidebar-backdrop"></div>
+    {{ include "sidebar" }}
+    <main class="main-content">
+        <article class="chapter-content">
+            {{ content }}
+        </article>
+    </main>
+    <script src="/static/main.js"></script>
+    <script src="/static/cluster-island.js"></script>
+</body>
+</html>

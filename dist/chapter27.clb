@@ -1,0 +1,72 @@
+CLD/1.0
+META|Chapter 27: Static Binary File Patching & Rewriting|Cluster-lang Team|2026-11-15|chapter|cluster,systems,guide|chapter-27-static-binary-file-patching--rewriting|
+BLOCKS_COUNT|27
+BLOCK|h1|1|Chapter 27: Static Binary File Patching & Rewriting
+BLOCK|p||To customize and adapt pre-compiled legacy executables, update static configurations embedded within binary files, or run automated patch procedures on compiled artifacts, Cluster-lang provides built-in low-level file I/O streams that compile directly to raw C library primitives.
+BLOCK|p||This chapter details:
+BLOCK|p||1. **Low-level Binary File Stream Built-ins** (`file_open`, `file_seek`, `file_write_byte`, `file_close`).
+BLOCK|p||2. **Static Byte Replacement** to overwrite instructions, metadata headers, or data segments directly on disk.
+BLOCK|hr||
+BLOCK|h2|2|1. Low-level Binary File Built-ins
+BLOCK|p||Cluster-lang provides four direct built-in primitives to navigate and modify binary files without loading the entire contents into memory. These map straight to standard POSIX `fopen`, `fseek`, `fwrite`, and `fclose` operations.
+BLOCK|list||`file_open(path: string, mode: string) -> ptr`: Opens a file handle. Use `"r+b"` for read/write binary mode.
+BLOCK|list||`file_seek(handle: ptr, offset: int)`: Moves the stream cursor to a specific byte position.
+BLOCK|list||`file_write_byte(handle: ptr, byte_value: int)`: Writes a single byte (cast to an 8-bit integer) to the current cursor position.
+BLOCK|list||`file_close(handle: ptr)`: Flushes changes and closes the file descriptor.
+BLOCK|hr||
+BLOCK|h2|2|2. Practical Binary File Patching Example
+BLOCK|p||The following program creates a dummy binary file, opens it in read/write binary mode, navigates to a specific offset, and rewrites its contents.
+BLOCK|code|python|fn patch_binary(file_path: string, offset: int, replacement_bytes: vector[int]) -> int:
+    # Open the compiled binary file on disk in read/write binary mode
+    f := file_open(file_path, "r+b")
+    if f == 0:
+        put "Error: Unable to open binary file."
+        return -1
+        
+    # Seek to the target offset where modifications are required
+    file_seek(f, offset)
+    
+    # Write each byte sequentially to overwrite the existing machine instructions
+    i := 0
+    sz := list_size(replacement_bytes)
+    while i < sz:
+        file_write_byte(f, replacement_bytes[i + 0])
+        i += 1
+        
+    # Close the handle to flush changes
+    file_close(f)
+    put "Successfully patched " + file_path + " at offset " + to_text(offset)
+    return 0
+
+fn main():
+    # 1. Create a dummy binary file containing a signature string
+    file_write("app_signature.bin", "VER_1.0_PROD")
+    
+    # 2. Prepare patch bytes to update the version suffix from "1.0" to "2.5"
+    patch_payload := vector[int]()
+    list_push(patch_payload, 50)  # ASCII '2'
+    list_push(patch_payload, 46)  # ASCII '.'
+    list_push(patch_payload, 53)  # ASCII '5'
+    
+    # Offset of the version text starts at index 4 ("1.0")
+    patch_binary("app_signature.bin", 4, patch_payload)
+    
+    # 3. Read and print the resulting patched output
+    updated_signature := read_file("app_signature.bin")
+    put "Updated signature: " + updated_signature
+    # Output: Updated signature: VER_2.5_PROD
+BLOCK|hr||
+BLOCK|h2|2|3. How to Compile and Run
+BLOCK|p||To compile a binary patcher in Cluster-lang, compile normally via `zkc`:
+BLOCK|code|bash|zkc patcher.cl -o patcher.out
+./patcher.out
+BLOCK|p||This compiles your script down to high-performance C++ code utilizing raw file streams, making it capable of patching gigabyte-sized binary files at maximum hard-drive speeds.
+BLOCK|hr||
+BLOCK|h3|3|Chapter Navigation
+BLOCK|list||[← Chapter 26](/chapter26.html)
+BLOCK|list||[Chapter 28 →](/chapter28.html)
+BLOCK|list||[Back to Table of Contents](/index.html)
+BLOCK|island|load|count="27"|Counter
+ISLANDS_COUNT|1
+ISLAND|Counter|load|count="27"|
+END_CLD

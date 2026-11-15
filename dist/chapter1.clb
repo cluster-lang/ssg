@@ -1,0 +1,49 @@
+CLD/1.0
+META|Cluster-lang: Chapter 1 — The Basics|Cluster-lang Team|2026-11-15|chapter|cluster,systems,guide|cluster-lang-chapter-1--the-basics|
+BLOCKS_COUNT|35
+BLOCK|h1|1|Cluster-lang: Chapter 1 — The Basics
+BLOCK|p||Welcome to Cluster-lang! Cluster is a high-performance systems and scripting language with Pythonic readability, C++ execution speed, and compile-time memory safety.
+BLOCK|hr||
+BLOCK|h2|2|1. Variables & Declarations
+BLOCK|p||In Cluster-lang, variables can be defined with implicit or explicit type declarations.
+BLOCK|h3|3|Implicit Variable Declaration (`:=`)
+BLOCK|p||By default, variables are declared and initialized using the `:=` operator. The compiler automatically infers the correct type:
+BLOCK|code|python|x := 42                // Inferred as int
+name := "Alice"        // Inferred as string
+is_valid := True       // Inferred as bool
+pi := 3.1415           // Inferred as float
+BLOCK|h3|3|Explicit Variable Declaration (`: type :=`)
+BLOCK|p||If you want to enforce a specific type or help the compiler's static analysis, add a colon `:` followed by the type name:
+BLOCK|code|python|age: int := 25
+price: float := 19.99
+greeting: string := "Hello, World!"
+BLOCK|h3|3|Constants (`constexpr` / `const`)
+BLOCK|p||Constants are variables whose values cannot change after initialization. Prefix the declaration with `constexpr` or `const`:
+BLOCK|code|python|constexpr PI := 3.14159
+constexpr MaxConnections: int := 100
+BLOCK|hr||
+BLOCK|h2|2|2. Basic Data Types
+BLOCK|p||Cluster-lang supports the following primitive types:
+BLOCK|p||| Type | Description | C++ Under the Hood |
+BLOCK|p||| :--- | :--- | :--- |
+BLOCK|p||| `int` | Signed 64-bit integer | `int64_t` / `int` |
+BLOCK|p||| `float` | 64-bit double-precision floating point | `double` / `float` |
+BLOCK|p||| `string` | Text string | `std::string` |
+BLOCK|p||| `bool` | Boolean (`True` or `False`) | `bool` |
+BLOCK|p||| `void` | Empty/return-free type | `void` |
+BLOCK|hr||
+BLOCK|h2|2|3. Basic Input / Output (`put`)
+BLOCK|p||The `put` statement outputs values to the console, automatically appending a newline. You can pass variables, literals, or expressions:
+BLOCK|code|python|put "Hello, Alice!"
+put 42 + 8
+BLOCK|p||To concatenate strings and print them:
+BLOCK|code|python|name := "Bob"
+put "Hello, " + name
+BLOCK|hr||
+BLOCK|h3|3|Chapter Navigation
+BLOCK|list||[Chapter 2 →](/chapter2.html)
+BLOCK|list||[Back to Table of Contents](/index.html)
+BLOCK|island|load|count="1"|Counter
+ISLANDS_COUNT|1
+ISLAND|Counter|load|count="1"|
+END_CLD

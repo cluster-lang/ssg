@@ -1,0 +1,148 @@
+title: Chapter 29: Systems Memory Freedom & Raw Pointers
+author: Cluster-lang Team
+date: 2026-11-15
+layout: chapter
+tags: cluster,systems,guide
+===
+
+# Chapter 29: Systems Memory Freedom & Raw Pointers
+
+Cluster-lang is designed to replace both Python and C/C++/Rust. While high-level application code enjoys strict automatic memory safety and bounds checking, systems programming, game engines, embedded drivers, and OS kernels require direct hardware memory control.
+
+Cluster-lang provides **Systems Memory Freedom**: safe, high-level ergonomics by default, with opt-in zero-overhead raw pointer manipulation.
+
+This chapter covers:
+1. **The `unsafe` Block Boundary** for auditing low-level operations.
+2. **Raw Pointer Types** (`ptr`, `ptr[T]`, `*T`).
+3. **Address-of (`&` / `addr_of`) and Dereferencing (`*` / `deref`)**.
+4. **Direct Heap Allocations** (`mem_alloc`, `mem_free`, `mem_realloc`).
+5. **Memory Block Manipulation** (`mem_copy`, `mem_set`, `mem_move`).
+6. **Pointer Arithmetic** (`ptr_add`, `ptr_diff`, `ptr_to_int`, `int_to_ptr`).
+7. **The High-Performance Arena Allocator** (`std::alloc`).
+
+---
+
+## 1. The `unsafe` Block Boundary
+
+To maintain software reliability, raw pointer dereferences and unchecked memory modifications can be scoped inside explicit `unsafe` blocks. This allows developers and security auditors to quickly isolate bare-metal operations:
+
+```python
+fn main():
+    val := 100
+
+    unsafe:
+        # Explicitly marked low-level memory block
+        p := addr_of(val)
+        put "Address of val: " + to_text(ptr_to_int(p))
+```
+
+---
+
+## 2. Address-of and Dereferencing
+
+Cluster-lang allows retrieving the memory address of local variables, model fields, and vector elements:
+
+```python
+fn main():
+    target := 42
+
+    # Take address using addr_of or &
+    p := addr_of(target)
+
+    # Read value through pointer (dereference)
+    v := *p
+    put "Read through pointer: " + to_text(v)   # 42
+
+    # Mutate value through pointer
+    *p = 999
+    put "Mutated target: " + to_text(target)    # 999
+```
+
+---
+
+## 3. Direct Heap Allocation Primitives
+
+For performance-critical code where the general garbage collector or automatic lifetime manager is bypassed, developers can manage raw heap memory directly:
+
+*   `mem_alloc(bytes: int) -> ptr`: Allocates a raw byte buffer on the heap (maps to libc `malloc`).
+*   `mem_free(p: ptr)`: Releases the allocated block (maps to libc `free`).
+*   `mem_realloc(p: ptr, new_bytes: int) -> ptr`: Resizes an existing heap allocation.
+
+```python
+fn main():
+    # Allocate a buffer for 10 64-bit integers (80 bytes)
+    buffer := mem_alloc(80)
+
+    # Store values at offsets
+    p0 := ptr_add(buffer, 0)
+    *p0 = 12345
+
+    put "Value at buffer[0]: " + to_text(*p0)
+
+    # Always free manually allocated buffers
+    mem_free(buffer)
+```
+
+---
+
+## 4. Block Memory Operations (`mem_set`, `mem_copy`, `mem_move`)
+
+Bulk memory transfers compile directly to SIMD-accelerated CPU instructions:
+
+*   `mem_set(dest: ptr, byte_val: int, count: int)`: Sets memory to a specified byte value (e.g. zeroing buffers).
+*   `mem_copy(dest: ptr, src: ptr, count: int)`: High-speed non-overlapping copy.
+*   `mem_move(dest: ptr, src: ptr, count: int)`: Safe copy handling overlapping regions.
+
+```python
+fn main():
+    src := mem_alloc(64)
+    dst := mem_alloc(64)
+
+    # Initialize source to zeros
+    mem_set(src, 0, 64)
+
+    # Copy 64 bytes from src to dst
+    mem_copy(dst, src, 64)
+
+    mem_free(src)
+    mem_free(dst)
+```
+
+---
+
+## 5. Pointer Arithmetic
+
+Cluster-lang supports precise byte-level and element-level pointer offset calculations:
+
+*   `ptr_add(p: ptr, offset_bytes: int) -> ptr`: Returns a new pointer offset by the given bytes.
+*   `ptr_diff(p1: ptr, p2: ptr) -> int`: Returns the byte difference between two addresses.
+*   `ptr_to_int(p: ptr) -> int`: Casts an address to a 64-bit unsigned integer.
+*   `int_to_ptr(addr: int) -> ptr`: Reconstructs a pointer from an integer address (e.g. for memory-mapped I/O).
+
+---
+
+## 6. Scoped Arena Allocator (`std::alloc`)
+
+Repeated individual heap allocations cause memory fragmentation and cache misses. The Cluster standard library includes a high-performance **Arena Allocator** in `std/alloc.zk` (`std/alloc.cl`):
+
+```python
+# Create an arena with a 1MB contiguous buffer
+arena := Arena_new(1048576)
+
+# Allocate fast, linear memory slices with zero malloc overhead
+buf1 := Arena_alloc(arena, 256)
+buf2 := Arena_alloc(arena, 512)
+
+# Reset or release all allocations at once in a single instruction!
+Arena_reset(arena)
+Arena_free(arena)
+```
+
+---
+
+### Chapter Navigation
+- [← Chapter 28](/chapter28.html)
+- [Chapter 30 →](/chapter30.html)
+- [Back to Table of Contents](/index.html)
+
+<island name="Counter" client:load count="29" />

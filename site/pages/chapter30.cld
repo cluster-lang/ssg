@@ -1,0 +1,119 @@
+title: Chapter 30: Zero-Glue C/C++ Interoperability & Native Math
+author: Cluster-lang Team
+date: 2026-11-15
+layout: chapter
+tags: cluster,systems,guide
+===
+
+# Chapter 30: Zero-Glue C/C++ Interoperability & Native Math
+
+A major barrier when adopting new systems programming languages is the "glue code problem": writing thousands of lines of wrappers, FFI bindings, Cython definitions, or PyO3 adapters to call existing C/C++ libraries.
+
+Cluster-lang solves this completely with **Zero-Glue C Integration**. You can directly include C standard library headers, link system shared libraries, and call native C functions with zero overhead and zero wrappers.
+
+This chapter covers:
+1. **The `c_include` Directive** for instant standard header ingestion.
+2. **The `link` Directive & Compiler Linker Flags** (`-l<lib>`, `-L<dir>`).
+3. **The `extern fn` Declaration** for custom C/C++ symbol signatures.
+4. **Native Double & Floating-Point LLVM Lowering**.
+5. **High-Performance Built-in Math Functions**.
+
+---
+
+## 1. Direct Header Ingestion with `c_include`
+
+To use standard C functions, simply include the header at the top of your Cluster source file:
+
+```python
+c_include "math.h"
+c_include "stdio.h"
+
+fn main():
+    # Call C standard library functions directly!
+    x := 16.0
+    s := sqrt(x)
+    put "Square root of 16.0 is: " + to_text(s)
+    
+    val := cos(0.0)
+    put "Cos(0.0) is: " + to_text(val)
+```
+
+The compiler automatically imports function prototypes, return types, and parameter signatures for headers like `math.h`, `stdio.h`, `stdlib.h`, `string.h`, `time.h`, and `unistd.h`.
+
+---
+
+## 2. Dynamic Library Linking (`link`)
+
+When your code depends on external C libraries (such as `libm`, `libcrypto`, `libcurl`, or `libsqlite3`), use the `link` directive:
+
+```python
+# Instructs the linker to link libm (-lm)
+link "m"
+
+# Instructs the linker to link libssl (-lssl)
+link "ssl"
+```
+
+You can also pass library names and library search paths directly from the CLI:
+
+```bash
+./cl run -lm -L/usr/local/lib main.cl
+```
+
+The Cluster compiler automatically injects `-Wl,-rpath` flags to ensure your compiled binaries locate shared libraries at runtime without manual `LD_LIBRARY_PATH` configuration.
+
+---
+
+## 3. External Function Declarations (`extern fn`)
+
+For custom third-party C/C++ libraries that do not have automated header mappings, you can declare external functions using the `extern fn` syntax:
+
+```python
+link "m"
+
+# Declare external C signatures
+extern fn hypot(x: float, y: float) -> float
+extern fn pow(base: float, exponent: float) -> float
+
+fn main():
+    h := hypot(3.0, 4.0)
+    put "Hypotenuse (3, 4) = " + to_text(h)    # 5.000000
+
+    p := pow(2.0, 10.0)
+    put "2^10 = " + to_text(p)                 # 1024.000000
+```
+
+---
+
+## 4. Native 64-bit Float Lowering
+
+Cluster-lang features full native LLVM `double` lowering for IEEE 754 64-bit floating point numbers:
+
+*   **Float Arithmetic**: Lowered to native CPU instructions (`fadd`, `fsub`, `fmul`, `fdiv`, `fneg`).
+*   **Float Comparisons**: Evaluated via IEEE compliant ordered comparison (`fcmp oeq`, `fcmp one`, `fcmp olt`, `fcmp ogt`).
+*   **Automatic Int-to-Float Promotion**: Passing integer values where floats are expected automatically inserts zero-cost `sitofp` conversions.
+
+```python
+fn main():
+    a := 3.14159
+    b := 2.71828
+
+    sum := a + b
+    diff := a - b
+    prod := a * b
+    div := a / b
+
+    put sum
+    put diff
+    put prod
+    put div
+```
+
+---
+
+### Chapter Navigation
+- [← Chapter 29](/chapter29.html)
+- [Chapter 31 →](/chapter31.html)
+- [Back to Table of Contents](/index.html)
+
+<island name="Counter" client:load count="30" />

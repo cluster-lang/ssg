@@ -1,0 +1,90 @@
+CLD/1.0
+META|Chapter 21: Custom Memory Allocators|Cluster-lang Team|2026-11-15|chapter|cluster,systems,guide|chapter-21-custom-memory-allocators|
+BLOCKS_COUNT|47
+BLOCK|h1|1|Chapter 21: Custom Memory Allocators
+BLOCK|p||While Cluster's default memory management handles most use cases gracefully, high-performance domains demand granular control over memory allocation. By seamlessly binding to C++ allocation patterns, Cluster allows you to implement custom memory allocators. This feature provides Python-like readability while unlocking bare-metal C++ efficiency, giving you complete control over memory layouts and allocation strategies.
+BLOCK|hr||
+BLOCK|h2|2|1. Why Custom Allocators Matter
+BLOCK|p||Custom allocators are essential for domains where standard heap allocation overhead is unacceptable.
+BLOCK|list||**Game Engines**: Minimize latency spikes and fragmentation by pre-allocating memory pools.
+BLOCK|list||**Embedded Systems**: Fit within tight memory constraints and avoid dynamic allocation completely.
+BLOCK|list||**Arena Allocation**: Allocate complex node-based structures and free them entirely in one operation.
+BLOCK|list||**Debugging & Profiling**: Track allocation sizes, detect memory leaks, and profile allocation hotspots.
+BLOCK|p||| Allocator Type | Best Use Case | Performance Characteristics |
+BLOCK|p||| -------------- | ------------- | --------------------------- |
+BLOCK|p||| Standard Heap  | General use   | Moderate speed, high fragmentation risk |
+BLOCK|p||| Pool Allocator | Fixed size nodes | Very fast, zero fragmentation |
+BLOCK|p||| Arena / Linear | Per-frame data   | Blazing fast allocation, bulk deallocation |
+BLOCK|p||| Tracking       | Debugging        | Slower due to logging/tracking overhead |
+BLOCK|hr||
+BLOCK|h2|2|2. Using Allocator-Aware Box Types
+BLOCK|p||The `box[T]` type in Cluster represents a uniquely-owned pointer. For custom memory control, you can provide an allocator type as the second type argument. The syntax is `box[T, AllocType[T]]`.
+BLOCK|code|python|# Allocates a User instance using CustomAlloc
+user_ptr := box[User, CustomAlloc[User]](User(id=1))
+BLOCK|p||This enforces that the `box` will allocate and deallocate the memory using the specified `CustomAlloc[User]` type, bypassing the standard heap `new`/`delete` if defined so.
+BLOCK|hr||
+BLOCK|h2|2|3. Using Allocator-Aware Vectors
+BLOCK|p||Just like `box`, dynamically sized arrays can leverage custom allocators. The `vector` container accepts a second type parameter for the allocator: `vector[T, AllocType[T]]`.
+BLOCK|code|python|# A dynamic array powered by an ArenaAllocator
+buffer := vector[int, ArenaAllocator[int]]()
+BLOCK|p||This ensures every resizing operation of the vector relies strictly on your tailored memory strategy.
+BLOCK|hr||
+BLOCK|h2|2|4. Defining a Custom Allocator via cpp_inject
+BLOCK|p||To create an allocator, you inject raw C++ code satisfying the standard C++ allocator requirements. Here, we define a `VerboseAllocator` that logs allocations.
+BLOCK|code|python|cpp_inject "template <typename T> struct VerboseAllocator { \
+    typedef T value_type; \
+    VerboseAllocator() noexcept {} \
+    template <typename U> VerboseAllocator(const VerboseAllocator<U>&) noexcept {} \
+    T* allocate(std::size_t n) { \
+        std::cout << \"[Alloc] \" << n << \" elements\\n\"; \
+        return static_cast<T*>(::operator new(n * sizeof(T))); \
+    } \
+    void deallocate(T* p, std::size_t n) noexcept { \
+        std::cout << \"[Dealloc]\\n\"; \
+        ::operator delete(p); \
+    } \
+};"
+BLOCK|hr||
+BLOCK|h2|2|5. How the Box Class Template Works Internally
+BLOCK|p||Internally, `box[T, Allocator]` leverages C++ template metaprogramming to behave like a customized `std::unique_ptr`. However, unlike a standard `std::unique_ptr` which only takes a custom deleter, the allocator-aware box integrates a full stateful or stateless allocator for both creation and destruction, marrying Pythonic syntax with complex C++ memory mechanics.
+BLOCK|hr||
+BLOCK|h2|2|6. Arrow Operator Auto-Detection
+BLOCK|p||In Cluster, pointer dereferencing is delightfully simple. You do not need explicit `->` operators. When you access a property on a `box` type, such as `p.x`, the compiler automatically detects the pointer semantics and emits the corresponding C++ arrow operator (`p->x`).
+BLOCK|code|python|# p is a box[Point]
+p := box[Point](Point(x=10, y=20))
+# Automatically translates to p->x
+val := p.x 
+BLOCK|hr||
+BLOCK|h2|2|7. Complete Example: Verbose Allocation Tracking
+BLOCK|p||Below is a complete, runnable example demonstrating a custom logging allocator applied to a `box`.
+BLOCK|code|python|cpp_inject "template <typename T> struct VerboseAllocator { \
+    typedef T value_type; \
+    VerboseAllocator() noexcept {} \
+    template <typename U> VerboseAllocator(const VerboseAllocator<U>&) noexcept {} \
+    T* allocate(std::size_t n) { \
+        std::cout << \"[Alloc] \" << n << \" elements\\n\"; \
+        return static_cast<T*>(::operator new(n * sizeof(T))); \
+    } \
+    void deallocate(T* p, std::size_t n) noexcept { \
+        std::cout << \"[Dealloc]\\n\"; \
+        ::operator delete(p); \
+    } \
+};"
+
+model Point:
+    x: int
+    y: int
+
+fn main():
+    p := box[Point, VerboseAllocator[Point]](Point(x=10, y=20))
+    put "x=" + to_text(p.x) + ", y=" + to_text(p.y)
+BLOCK|p||Running this code will print allocation metrics before outputting the coordinates, perfectly blending Cluster's pristine syntax with uncompromised C++ control.
+BLOCK|hr||
+BLOCK|h3|3|Chapter Navigation
+BLOCK|list||[← Chapter 20](/chapter20.html)
+BLOCK|list||[Chapter 22 →](/chapter22.html)
+BLOCK|list||[Back to Table of Contents](/index.html)
+BLOCK|island|load|count="21"|Counter
+ISLANDS_COUNT|1
+ISLAND|Counter|load|count="21"|
+END_CLD

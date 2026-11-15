@@ -1,0 +1,165 @@
+title: Chapter 31: Native Multi-Dimensional Tensors & SIMD Matrix Math
+author: Cluster-lang Team
+date: 2026-11-15
+layout: chapter
+tags: cluster,systems,guide
+===
+
+# Chapter 31: Native Multi-Dimensional Tensors & SIMD Matrix Math
+
+In Python, developers rely on heavy third-party C/C++ extensions like NumPy, PyTorch, or TensorFlow to perform matrix math. In C or Go, developers must write awkward multi-dimensional loops or integrate third-party BLAS/LAPACK libraries.
+
+Cluster-lang provides **Native Tensors and SIMD Matrix Mathematics** built directly into the language and runtime with **zero external dependencies**.
+
+This chapter covers:
+1. **The Native `tensor` Type** and contiguous cache layout.
+2. **Matrix Multiplication Operators (`@` and `@=`)**.
+3. **Auto-Vectorized Cache-Optimized SIMD GEMM** (AVX2 / AVX-512).
+4. **Elementwise Tensor Operations (`+`, `-`, `*`) and Scalar Scaling**.
+5. **Ergonomic Built-in Methods** (`.rows()`, `.cols()`, `.size()`, `.get()`, `.set()`, `.transpose()`, `.sum()`, `.dot()`).
+6. **Direct Display via `put`**.
+7. **The Standard Library Module (`std::tensor`)**.
+
+---
+
+## 1. Creating Tensors
+
+Tensors can be constructed using native built-ins:
+
+```python
+fn main():
+    # Create a 2x3 matrix filled with zeros
+    z := tensor_zeros(2, 3)
+
+    # Create a 3x3 matrix filled with ones
+    o := tensor_ones(3, 3)
+
+    # Create a 2x2 matrix filled with a specific scalar
+    f := tensor_fill(2, 2, 42.5)
+
+    # Inspect dimensions
+    put "Rows: " + to_text(z.rows())     # 2
+    put "Cols: " + to_text(z.cols())     # 3
+    put "Size: " + to_text(z.size())     # 6
+```
+
+---
+
+## 2. Matrix Multiplication Operator (`@` and `@=`)
+
+Cluster-lang adopts the universal `@` operator for matrix multiplication:
+
+```python
+fn main():
+    # 2x3 Matrix A
+    a := tensor_zeros(2, 3)
+    a.set(0, 0, 1.0)
+    a.set(0, 1, 2.0)
+    a.set(0, 2, 3.0)
+    a.set(1, 0, 4.0)
+    a.set(1, 1, 5.0)
+    a.set(1, 2, 6.0)
+
+    # 3x2 Matrix B
+    b := tensor_ones(3, 2)
+
+    # Matrix multiplication: (2x3) @ (3x2) -> (2x2)
+    c := a @ b
+    
+    put "Result of A @ B:"
+    put c
+
+    # In-place matrix multiply operator:
+    multiplier := tensor_fill(2, 2, 2.0)
+    c @= multiplier
+    put "After c @= multiplier:"
+    put c
+```
+
+---
+
+## 3. High-Performance Cache-Optimized GEMM
+
+In traditional matrix multiplication, standard `i-j-k` nested loops jump across memory rows, causing severe cache line evictions.
+
+Cluster-lang's matrix multiplication engine implements a cache-optimized `i-k-j` traversal loop:
+*   Contiguous inner-loop memory strides maximize L1/L2 CPU cache residency.
+*   The Clang/LLVM backend automatically auto-vectorizes the inner loops into 256-bit AVX2 / 512-bit AVX-512 SIMD vector instructions.
+*   Enjoys near-native BLAS performance without requiring external OpenBLAS or MKL packages.
+
+---
+
+## 4. Elementwise Math & Scalar Scaling
+
+You can add, subtract, and multiply tensors elementwise with standard arithmetic operators:
+
+```python
+fn main():
+    a := tensor_fill(2, 2, 10.0)
+    b := tensor_fill(2, 2, 3.0)
+
+    # Elementwise addition (10 + 3 = 13)
+    sum := a + b
+
+    # Elementwise subtraction (10 - 3 = 7)
+    diff := a - b
+
+    # Elementwise Hadamard multiplication (10 * 3 = 30)
+    prod := a * b
+
+    # Scalar scaling (10 * 0.5 = 5)
+    scaled := a * 0.5
+```
+
+---
+
+## 5. Tensor Inspection & Reductions
+
+Tensors provide rich built-in inspection and reduction methods:
+
+```python
+fn main():
+    m := tensor_zeros(2, 3)
+    # Fill elements...
+    
+    # Sum all elements in the tensor
+    total := m.sum()
+
+    # Transpose the matrix (swap rows and columns)
+    mT := m.transpose()
+    
+    # Vector dot product
+    v1 := tensor_fill(1, 4, 2.0)
+    v2 := tensor_fill(1, 4, 3.0)
+    dot_product := v1.dot(v2)
+```
+
+---
+
+## 6. The Standard Library Module (`std::tensor`)
+
+The standard library includes high-level linear algebra helpers in `std/tensor.zk` (`std/tensor.cl`):
+
+```python
+import std::tensor
+
+fn main():
+    # Identity matrix of size 4x4
+    I := eye(4)
+
+    # Convert native vector to tensor
+    weights_vec: vector[float] = [0.1, 0.2, 0.3, 0.4]
+    W := from_vector(2, 2, weights_vec)
+
+    # Convert tensor back to vector
+    out_vec := to_vector(W)
+```
+
+---
+
+### Chapter Navigation
+- [← Chapter 30](/chapter30.html)
+- [Chapter 32 →](/chapter32.html)
+- [Back to Table of Contents](/index.html)
+
+<island name="Counter" client:load count="31" />

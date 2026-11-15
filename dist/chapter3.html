@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cluster-lang: Chapter 3 — Models & Object Orientation - The Cluster Book</title>
+    <meta name="description" content="">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <header class="mobile-header">
+        <a href="/index.html" class="mobile-logo">The Cluster Book</a>
+        <button class="mobile-toggle" aria-label="Toggle navigation">☰</button>
+    </header>
+    <div class="sidebar-backdrop"></div>
+    <nav class="sidebar">
+    <div class="sidebar-header">
+        <h1><a href="/index.html" style="color:#fff;text-decoration:none;">The Cluster Book</a></h1>
+        <p>Official Language Guide &middot; <strong>Cluster-SSG</strong></p>
+    </div>
+    <ul class="sidebar-nav">
+        <li><a href="/index.html">Home</a></li>
+        <li><a href="/chapter1.html"><span class="chapter-num">01</span> The Basics</a></li>
+        <li><a href="/chapter2.html"><span class="chapter-num">02</span> Control Flow & Functions</a></li>
+        <li><a href="/chapter3.html"><span class="chapter-num">03</span> Models & Object Orientation</a></li>
+        <li><a href="/chapter4.html"><span class="chapter-num">04</span> Memory Safety & Ownership</a></li>
+        <li><a href="/chapter5.html"><span class="chapter-num">05</span> Concurrency & Channels</a></li>
+        <li><a href="/chapter6.html"><span class="chapter-num">06</span> Async Programming & Metaprogramming</a></li>
+        <li><a href="/chapter7.html"><span class="chapter-num">07</span> Database & Table Queries</a></li>
+        <li><a href="/chapter8.html"><span class="chapter-num">08</span> Tensor Math & Hardware Peripherals</a></li>
+        <li><a href="/chapter9.html"><span class="chapter-num">09</span> AI-First Compiler Features</a></li>
+        <li><a href="/chapter10.html"><span class="chapter-num">10</span> Custom Frontend & Backend File Extensions</a></li>
+        <li><a href="/chapter11.html"><span class="chapter-num">11</span> Modular Web Development & High-Speed SSR</a></li>
+        <li><a href="/chapter12.html"><span class="chapter-num">12</span> Machine Adaptability</a></li>
+        <li><a href="/chapter13.html"><span class="chapter-num">13</span> Vector Space Mapping & Controllable UI Components</a></li>
+        <li><a href="/chapter14.html"><span class="chapter-num">14</span> High-Performance Site Generation & Native Releases</a></li>
+        <li><a href="/chapter15.html"><span class="chapter-num">15</span> Native AI Primitives & Compilation Secrecy</a></li>
+        <li><a href="/chapter16.html"><span class="chapter-num">16</span> The Cluster-Jekyll Hybrid Compiler Bridge</a></li>
+        <li><a href="/chapter17.html"><span class="chapter-num">17</span> AI/ML Training and High-Performance Tensor Operations</a></li>
+        <li><a href="/chapter18.html"><span class="chapter-num">18</span> Dual-Semantics Ownership & Lifetime Safety</a></li>
+        <li><a href="/chapter19.html"><span class="chapter-num">19</span> Zero-Overhead Traits & C++20 Concept Constraints</a></li>
+        <li><a href="/chapter20.html"><span class="chapter-num">20</span> Inline Assembly & SIMD Vector Intrinsics</a></li>
+        <li><a href="/chapter21.html"><span class="chapter-num">21</span> Custom Memory Allocators</a></li>
+        <li><a href="/chapter22.html"><span class="chapter-num">22</span> Production HTTP & HTTPS Web Stack</a></li>
+        <li><a href="/chapter23.html"><span class="chapter-num">23</span> Pattern Matching, Channel Select & Defer</a></li>
+        <li><a href="/chapter24.html"><span class="chapter-num">24</span> Cluster Containers (clc) & Vacuum Sandboxing</a></li>
+        <li><a href="/chapter25.html"><span class="chapter-num">25</span> Bootstrapping a Custom Operating System (Cluster OS)</a></li>
+        <li><a href="/chapter26.html"><span class="chapter-num">26</span> Cybersecurity, Memory Manipulation & Live Dynamic Hot-Patching</a></li>
+        <li><a href="/chapter27.html"><span class="chapter-num">27</span> Static Binary File Patching & Rewriting</a></li>
+        <li><a href="/chapter28.html"><span class="chapter-num">28</span> Ultra-Token-Efficient Developer Ergonomics</a></li>
+        <li><a href="/chapter29.html"><span class="chapter-num">29</span> Systems Memory Freedom & Raw Pointers</a></li>
+        <li><a href="/chapter30.html"><span class="chapter-num">30</span> Zero-Glue C/C++ Interoperability & Native Math</a></li>
+        <li><a href="/chapter31.html"><span class="chapter-num">31</span> Native Multi-Dimensional Tensors & SIMD Matrix Math</a></li>
+        <li><a href="/chapter32.html"><span class="chapter-num">32</span> Zero-Training AI Model Weight Surgery (SafeTensors & GGUF)</a></li>
+    </ul>
+</nav>
+
+    <main class="main-content">
+        <article class="chapter-content">
+            <h1 id="cluster-lang-chapter-3--models--object-orientation">Cluster-lang: Chapter 3 — Models & Object Orientation</h1>
+<p>Cluster-lang provides clean struct and class modeling using the <code>model</code> keyword.</p>
+<hr />
+<h2 id="1--defining-models">1. Defining Models</h2>
+<p>Models hold fields (properties) and methods:</p>
+<pre><code class="language-python">model Address:
+    city: string
+    zipcode: int
+
+model User:
+    name: string
+    address: box[Address]    // box pointer to Address model
+
+    fn get_city() -> string:
+        // Methods can access local fields
+        if self.address == None:
+            return "Unknown"
+        return self.address.city</code></pre>
+<hr />
+<h2 id="2--instantiating-models">2. Instantiating Models</h2>
+<p>To instantiate a model, use the <code>box</code> keyword (which wraps it in a unique-pointer heap allocation) or construct it inline:</p>
+<pre><code class="language-python">// 1. Create a heap-allocated Address
+addr := box Address(city="New York", zipcode=10001)
+
+// 2. Pass it to a User instance (note the move semantics for boxes!)
+user := box User(name="John", address=move(addr))</code></pre>
+<hr />
+<h2 id="3--optional-chaining--">3. Optional Chaining (<code>?.</code>)</h2>
+<p>To access fields or call methods on potentially null reference pointers without manual nested <code>if</code> statements, use the optional chaining (<code>?.</code>) operator:</p>
+<pre><code class="language-python">// If user or user.address is None, this safely evaluates to None without crashing!
+city_name := user?.address?.city</code></pre>
+<p>If any reference along the chain evaluates to <code>None</code>, the execution stops and evaluates to <code>None</code> immediately.</p>
+<hr />
+<h2 id="4--null-coalescing-">4. Null Coalescing (<code>??</code>)</h2>
+<p>The null coalescing operator (<code>??</code>) evaluates to the left-hand operand if it is not null/empty, or returns the fallback right-hand value otherwise:</p>
+<pre><code class="language-python">// Checks if city_name is None or empty. If so, defaults to "Unknown City"
+current_city := city_name ?? "Unknown City"</code></pre>
+<h3 id="combining-optional-chaining--null-coalescing">Combining Optional Chaining & Null Coalescing</h3>
+<p>You can combine these two operators to write bulletproof, concise member access pipelines:</p>
+<pre><code class="language-python">city := user?.address?.city ?? "Default City"
+put city</code></pre>
+<p>This evaluates to the city name if the path is fully valid, or defaults safely to <code>"Default City"</code>.</p>
+<hr />
+<h3 id="chapter-navigation">Chapter Navigation</h3>
+<ul>
+  <li>[← Chapter 2](/chapter2.html)</li>
+  <li>[Chapter 4 →](/chapter4.html)</li>
+  <li>[Back to Table of Contents](/index.html)</li>
+</ul>
+<cluster-island data-island="Counter" data-client="load" count="3">
+  <!-- Astro-style Island Component: Counter (load) -->
+  <div class="cluster-island-placeholder" id="island-counter">
+    <span>[Interactive Island: Counter]</span>
+  </div>
+</cluster-island>
+
+        </article>
+    </main>
+    <script src="/static/main.js"></script>
+    <script src="/static/cluster-island.js"></script>
+</body>
+</html>

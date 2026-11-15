@@ -48,7 +48,15 @@ fn builder_init_templates(cfg: SsgConfig) -> TemplateRegistry:
         built_in_post := "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <title>" + ob + " title " + cb + " - " + ob + " site_name " + cb + "</title>\n  <link rel=\"stylesheet\" href=\"/static/style.css\">\n</head>\n<body>\n  " + ob + " include \"navbar\" " + cb + "\n  <article class=\"post-container\">\n    <header class=\"post-header\">\n      <h1>" + ob + " title " + cb + "</h1>\n      <div class=\"post-meta\">By <strong>" + ob + " author " + cb + "</strong> &middot; " + ob + " date " + cb + " &middot; Tags: <em>" + ob + " tags " + cb + "</em></div>\n    </header>\n    <div class=\"post-body\">\n      " + ob + " content " + cb + "\n    </div>\n  </article>\n  " + ob + " include \"footer\" " + cb + "\n</body>\n</html>"
         template_register_layout(tr, "post", built_in_post)
 
+    chap_layout_path := cfg.site_dir + "/layouts/chapter.html"
+    if file_exists(chap_layout_path) == 1:
+        template_register_layout(tr, "chapter", file_read(chap_layout_path))
+
     // Check and load components (includes)
+    side_path := cfg.site_dir + "/components/sidebar.html"
+    if file_exists(side_path) == 1:
+        template_register_include(tr, "sidebar", file_read(side_path))
+
     nav_path := cfg.site_dir + "/components/navbar.html"
     if file_exists(nav_path) == 1:
         template_register_include(tr, "navbar", file_read(nav_path))
@@ -122,6 +130,20 @@ fn builder_run_all(cfg: SsgConfig) -> BuildReport:
                 total_bins = total_bins + 1
         pi = pi + 1
 
+    // Dynamic 32-Chapter Compilation for The Cluster Book
+    let mut ci: int = 1
+    while ci <= 32:
+        ch_name := "chapter" + str(ci)
+        src_path := cfg.site_dir + "/pages/" + ch_name + ".cld"
+        out_path := cfg.dist_dir + "/" + ch_name + ".html"
+        if file_exists(src_path) == 1:
+            bytes := builder_compile_page(cfg, tr, islands, src_path, out_path)
+            total_bytes = total_bytes + bytes
+            total_pages = total_pages + 1
+            if cfg.output_binary == 1:
+                total_bins = total_bins + 1
+        ci = ci + 1
+
     // Blog / Posts
     post_src := cfg.site_dir + "/posts/hello-cluster-ssg.cld"
     post_out := cfg.dist_dir + "/hello-cluster-ssg.html"
@@ -147,6 +169,13 @@ fn builder_run_all(cfg: SsgConfig) -> BuildReport:
         file_write(js_dst, js_content)
         total_bytes = total_bytes + len(js_content)
 
+    main_js_src := cfg.site_dir + "/static/main.js"
+    main_js_dst := cfg.dist_dir + "/static/main.js"
+    if file_exists(main_js_src) == 1:
+        main_js_content := file_read(main_js_src)
+        file_write(main_js_dst, main_js_content)
+        total_bytes = total_bytes + len(main_js_content)
+
     // Generate Sitemap
     sitemap_path := cfg.dist_dir + "/sitemap.xml"
     let mut sitemap: string = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n"
@@ -154,6 +183,12 @@ fn builder_run_all(cfg: SsgConfig) -> BuildReport:
     sitemap = sitemap + "  <url><loc>" + cfg.base_url + "/about.html</loc><priority>0.8</priority></url>\n"
     sitemap = sitemap + "  <url><loc>" + cfg.base_url + "/docs.html</loc><priority>0.8</priority></url>\n"
     sitemap = sitemap + "  <url><loc>" + cfg.base_url + "/hello-cluster-ssg.html</loc><priority>0.7</priority></url>\n"
+
+    let mut si: int = 1
+    while si <= 32:
+        sitemap = sitemap + "  <url><loc>" + cfg.base_url + "/chapter" + str(si) + ".html</loc><priority>0.9</priority></url>\n"
+        si = si + 1
+
     sitemap = sitemap + "</urlset>\n"
     file_write(sitemap_path, sitemap)
     total_bytes = total_bytes + len(sitemap)

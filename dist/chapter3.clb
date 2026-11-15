@@ -1,0 +1,54 @@
+CLD/1.0
+META|Cluster-lang: Chapter 3 — Models & Object Orientation|Cluster-lang Team|2026-11-15|chapter|cluster,systems,guide|cluster-lang-chapter-3--models--object-orientation|
+BLOCKS_COUNT|29
+BLOCK|h1|1|Cluster-lang: Chapter 3 — Models & Object Orientation
+BLOCK|p||Cluster-lang provides clean struct and class modeling using the `model` keyword.
+BLOCK|hr||
+BLOCK|h2|2|1. Defining Models
+BLOCK|p||Models hold fields (properties) and methods:
+BLOCK|code|python|model Address:
+    city: string
+    zipcode: int
+
+model User:
+    name: string
+    address: box[Address]    // box pointer to Address model
+
+    fn get_city() -> string:
+        // Methods can access local fields
+        if self.address == None:
+            return "Unknown"
+        return self.address.city
+BLOCK|hr||
+BLOCK|h2|2|2. Instantiating Models
+BLOCK|p||To instantiate a model, use the `box` keyword (which wraps it in a unique-pointer heap allocation) or construct it inline:
+BLOCK|code|python|// 1. Create a heap-allocated Address
+addr := box Address(city="New York", zipcode=10001)
+
+// 2. Pass it to a User instance (note the move semantics for boxes!)
+user := box User(name="John", address=move(addr))
+BLOCK|hr||
+BLOCK|h2|2|3. Optional Chaining (`?.`)
+BLOCK|p||To access fields or call methods on potentially null reference pointers without manual nested `if` statements, use the optional chaining (`?.`) operator:
+BLOCK|code|python|// If user or user.address is None, this safely evaluates to None without crashing!
+city_name := user?.address?.city
+BLOCK|p||If any reference along the chain evaluates to `None`, the execution stops and evaluates to `None` immediately.
+BLOCK|hr||
+BLOCK|h2|2|4. Null Coalescing (`??`)
+BLOCK|p||The null coalescing operator (`??`) evaluates to the left-hand operand if it is not null/empty, or returns the fallback right-hand value otherwise:
+BLOCK|code|python|// Checks if city_name is None or empty. If so, defaults to "Unknown City"
+current_city := city_name ?? "Unknown City"
+BLOCK|h3|3|Combining Optional Chaining & Null Coalescing
+BLOCK|p||You can combine these two operators to write bulletproof, concise member access pipelines:
+BLOCK|code|python|city := user?.address?.city ?? "Default City"
+put city
+BLOCK|p||This evaluates to the city name if the path is fully valid, or defaults safely to `"Default City"`.
+BLOCK|hr||
+BLOCK|h3|3|Chapter Navigation
+BLOCK|list||[← Chapter 2](/chapter2.html)
+BLOCK|list||[Chapter 4 →](/chapter4.html)
+BLOCK|list||[Back to Table of Contents](/index.html)
+BLOCK|island|load|count="3"|Counter
+ISLANDS_COUNT|1
+ISLAND|Counter|load|count="3"|
+END_CLD
