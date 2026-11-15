@@ -24,7 +24,7 @@ model BuildReport:
     total_bytes_written: int
 
 fn config_default() -> SsgConfig:
-    return SsgConfig("Cluster SSG", "Next-Gen Blazing Fast Static Site Generator", "http://localhost:3000", "site", "dist", 1)
+    return SsgConfig("Cluster SSG", "Next-Gen Blazing Fast Static Site Generator", "http://localhost:3000", "site", "dist", 0)
 
 fn builder_init_templates(cfg: SsgConfig) -> TemplateRegistry:
     tr := template_new()
