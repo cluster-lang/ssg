@@ -18,6 +18,10 @@
         <h1><a href="/index.html">The Cluster Book</a></h1>
         <p>Official Language Guide</p>
     </div>
+    <div class="sidebar-search-btn" onclick="openClusterSearch()">
+        <span>🔍 Search documentation</span>
+        <span class="search-badge">Ctrl K</span>
+    </div>
     <ul class="sidebar-nav">
         <li><a href="/index.html">Home</a></li>
         <li><a href="/chapter1.html"><span class="chapter-num">01</span> The Basics</a></li>
@@ -134,6 +138,36 @@
   </div>
   <div class="cluster-sheet-footer">
     <span class="cluster-sheet-count">Total: 4 entries</span>
+  </div>
+</div>
+<div class="cluster-callout callout-tip">
+  <div class="callout-header"><span class="callout-icon">💡</span> <strong>Lightning Compilation</strong></div>
+  <div class="callout-body"><p>Cluster-SSG compiles 1,000 markdown and .cld pages in under 20ms using direct LLVM-native codegen.</p></div>
+</div>
+<div class="cluster-callout callout-warning">
+  <div class="callout-header"><span class="callout-icon">⚠️</span> <strong>Zero Dependencies Required</strong></div>
+  <div class="callout-body"><p>Unlike Astro, Cluster-SSG does NOT require Node.js, npm, or thousands of dependencies in node_modules.</p></div>
+</div>
+<h2 id="multi-language-quick-start">Multi-Language Quick Start</h2>
+<div class="cluster-tabs-wrapper">
+  <div class="cluster-tabs-header">
+    <button class="cluster-tab-btn active" onclick="clusterSwitchTab(this, 0)">Cluster (.cl)</button>
+    <button class="cluster-tab-btn" onclick="clusterSwitchTab(this, 1)">Python</button>
+    <button class="cluster-tab-btn" onclick="clusterSwitchTab(this, 2)">Bash</button>
+  </div>
+  <div class="cluster-tabs-body">
+    <div class="cluster-tab-pane" style="display:block;" data-tab-idx="0">
+      <div class="highlight"><pre class="highlight"><code>fn main():
+    print("🚀 Hello from pure native Cluster-SSG!")</code></pre></div>
+    </div>
+    <div class="cluster-tab-pane" style="display:none;" data-tab-idx="1">
+      <div class="highlight"><pre class="highlight"><code>def main():
+    print("Running via Python fallback wrapper")</code></pre></div>
+    </div>
+    <div class="cluster-tab-pane" style="display:none;" data-tab-idx="2">
+      <div class="highlight"><pre class="highlight"><code># Build static site with zero dependencies
+cluster-ssg build</code></pre></div>
+    </div>
   </div>
 </div>
 <cluster-island data-island="ThemeToggle" data-client="idle" >

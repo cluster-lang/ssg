@@ -179,6 +179,27 @@ fn ssg_extract_filename(full_path: string) -> string:
         return substring(name, 0, nlen - 4)
     return name
 
+fn ssg_escape_json(s: string) -> string:
+    let slen: int = len(s)
+    let mut out: string = ""
+    let mut i: int = 0
+    while i < slen:
+        c := char_at(s, i)
+        if c == "\"":
+            out = out + "\\\""
+        elif c == "\\":
+            out = out + "\\\\"
+        elif c == "\n":
+            out = out + "\\n"
+        elif c == "\r":
+            out = out + ""
+        elif c == "\t":
+            out = out + "\\t"
+        else:
+            out = out + c
+        i = i + 1
+    return out
+
 fn builder_run_all(cfg: SsgConfig) -> BuildReport:
     tr := builder_init_templates(cfg)
     islands := islands_registry_new()
@@ -198,6 +219,12 @@ fn builder_run_all(cfg: SsgConfig) -> BuildReport:
         else:
             break
 
+    // Ensure dist/api directory exists
+    sys_run("mkdir -p " + cfg.dist_dir + "/api")
+
+    let mut search_items: vector[string] = []
+    let mut chapters_api_items: vector[string] = []
+
     // 1. Dynamic Chapter Compilation with Previous / Next Navigation
     let mut ci: int = 1
     while ci <= total_chapters:
@@ -205,6 +232,23 @@ fn builder_run_all(cfg: SsgConfig) -> BuildReport:
         src_path := cfg.site_dir + "/pages/" + ch_name + ".cld"
         out_path := cfg.dist_dir + "/" + ch_name + ".html"
         if file_exists(src_path) == 1:
+            doc_info := ssg_load_cld(src_path, out_path)
+            let mut ch_title: string = doc_info.cld.meta.title
+            if len(ch_title) == 0:
+                ch_title = "Chapter " + str(ci)
+            let mut ch_desc: string = doc_info.cld.meta.description
+            if len(ch_desc) == 0:
+                ch_desc = "The Cluster Book documentation Chapter " + str(ci)
+
+            search_json := "  {\"title\": \"" + ssg_escape_json(ch_title) + "\", \"url\": \"/" + ch_name + ".html\", \"desc\": \"" + ssg_escape_json(ch_desc) + "\", \"category\": \"chapter\"}"
+            search_items.push(search_json)
+
+            chap_api_json := "  {\"id\": " + str(ci) + ", \"slug\": \"" + ch_name + "\", \"title\": \"" + ssg_escape_json(ch_title) + "\", \"url\": \"/" + ch_name + ".html\"}"
+            chapters_api_items.push(chap_api_json)
+
+            single_chap_json := "{\n  \"id\": " + str(ci) + ",\n  \"slug\": \"" + ch_name + "\",\n  \"title\": \"" + ssg_escape_json(ch_title) + "\",\n  \"url\": \"/" + ch_name + ".html\",\n  \"tags\": \"" + ssg_escape_json(doc_info.cld.meta.tags) + "\",\n  \"description\": \"" + ssg_escape_json(ch_desc) + "\"\n}\n"
+            file_write(cfg.dist_dir + "/api/" + ch_name + ".json", single_chap_json)
+
             bytes := builder_compile_chapter(cfg, tr, islands, src_path, out_path, ci, total_chapters)
             total_bytes = total_bytes + bytes
             total_pages = total_pages + 1
@@ -220,6 +264,21 @@ fn builder_run_all(cfg: SsgConfig) -> BuildReport:
         slug := ssg_extract_filename(p_path)
         if cld_starts_with(slug, "chapter") == 0:
             out_path := cfg.dist_dir + "/" + slug + ".html"
+            p_doc := ssg_load_cld(p_path, out_path)
+            let mut p_title: string = p_doc.cld.meta.title
+            if len(p_title) == 0:
+                p_title = slug
+            let mut p_desc: string = p_doc.cld.meta.description
+            if len(p_desc) == 0:
+                p_desc = "Cluster SSG static page: " + slug
+
+            let mut page_url: string = "/" + slug + ".html"
+            if slug == "index":
+                page_url = "/index.html"
+
+            search_json := "  {\"title\": \"" + ssg_escape_json(p_title) + "\", \"url\": \"" + page_url + "\", \"desc\": \"" + ssg_escape_json(p_desc) + "\", \"category\": \"page\"}"
+            search_items.push(search_json)
+
             bytes := builder_compile_page(cfg, tr, islands, p_path, out_path)
             total_bytes = total_bytes + bytes
             total_pages = total_pages + 1
@@ -234,6 +293,17 @@ fn builder_run_all(cfg: SsgConfig) -> BuildReport:
         post_src := post_files[pfi]
         post_slug := ssg_extract_filename(post_src)
         post_out := cfg.dist_dir + "/" + post_slug + ".html"
+        post_doc := ssg_load_cld(post_src, post_out)
+        let mut post_title: string = post_doc.cld.meta.title
+        if len(post_title) == 0:
+            post_title = post_slug
+        let mut post_desc: string = post_doc.cld.meta.description
+        if len(post_desc) == 0:
+            post_desc = "Cluster SSG post: " + post_slug
+
+        search_json := "  {\"title\": \"" + ssg_escape_json(post_title) + "\", \"url\": \"/" + post_slug + ".html\", \"desc\": \"" + ssg_escape_json(post_desc) + "\", \"category\": \"post\"}"
+        search_items.push(search_json)
+
         bytes := builder_compile_page(cfg, tr, islands, post_src, post_out)
         total_bytes = total_bytes + bytes
         total_pages = total_pages + 1
@@ -335,5 +405,45 @@ fn builder_run_all(cfg: SsgConfig) -> BuildReport:
     feed = feed + "  </channel>\n</rss>\n"
     file_write(feed_path, feed)
     total_bytes = total_bytes + len(feed)
+
+    // Generate Search Index (dist/search-index.json)
+    let mut search_index_content: string = "[\n"
+    let mut sidx: int = 0
+    while sidx < len(search_items):
+        search_index_content = search_index_content + search_items[sidx]
+        if sidx < len(search_items) - 1:
+            search_index_content = search_index_content + ",\n"
+        else:
+            search_index_content = search_index_content + "\n"
+        sidx = sidx + 1
+    search_index_content = search_index_content + "]\n"
+    file_write(cfg.dist_dir + "/search-index.json", search_index_content)
+    total_bytes = total_bytes + len(search_index_content)
+
+    // Generate Headless Chapters API (dist/api/chapters.json)
+    let mut chapters_api_content: string = "[\n"
+    let mut caidx: int = 0
+    while caidx < len(chapters_api_items):
+        chapters_api_content = chapters_api_content + chapters_api_items[caidx]
+        if caidx < len(chapters_api_items) - 1:
+            chapters_api_content = chapters_api_content + ",\n"
+        else:
+            chapters_api_content = chapters_api_content + "\n"
+        caidx = caidx + 1
+    chapters_api_content = chapters_api_content + "]\n"
+    file_write(cfg.dist_dir + "/api/chapters.json", chapters_api_content)
+    total_bytes = total_bytes + len(chapters_api_content)
+
+    // Generate Headless Site API (dist/api/index.json)
+    let mut site_api_content: string = "{\n"
+    site_api_content = site_api_content + "  \"site_name\": \"" + ssg_escape_json(cfg.site_name) + "\",\n"
+    site_api_content = site_api_content + "  \"tagline\": \"" + ssg_escape_json(cfg.site_tagline) + "\",\n"
+    site_api_content = site_api_content + "  \"base_url\": \"" + ssg_escape_json(cfg.base_url) + "\",\n"
+    site_api_content = site_api_content + "  \"total_chapters\": " + str(total_chapters) + ",\n"
+    site_api_content = site_api_content + "  \"generator\": \"cluster-ssg\",\n"
+    site_api_content = site_api_content + "  \"version\": \"1.0.0\"\n"
+    site_api_content = site_api_content + "}\n"
+    file_write(cfg.dist_dir + "/api/index.json", site_api_content)
+    total_bytes = total_bytes + len(site_api_content)
 
     return BuildReport(total_pages, total_bins, 1, total_bytes)

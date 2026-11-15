@@ -40,4 +40,26 @@ Jekyll | Ruby / Bundler | 42,000 ms | Heavy (Ruby/Gems) | 185.0 MB | No
 Astro | Node.js / Vite | 6,800 ms | Heavy (NPM/Vite) | 210.0 MB | Yes (React/Vue)
 :::
 
+::: callout type="tip" title="Lightning Compilation"
+Cluster-SSG compiles 1,000 markdown and .cld pages in under 20ms using direct LLVM-native codegen.
+:::
+
+::: callout type="warning" title="Zero Dependencies Required"
+Unlike Astro, Cluster-SSG does NOT require Node.js, npm, or thousands of dependencies in node_modules.
+:::
+
+## Multi-Language Quick Start
+
+::: tabs
+== Cluster (.cl)
+fn main():
+    print("🚀 Hello from pure native Cluster-SSG!")
+== Python
+def main():
+    print("Running via Python fallback wrapper")
+== Bash
+# Build static site with zero dependencies
+cluster-ssg build
+:::
+
 <island name="ThemeToggle" client:idle />
