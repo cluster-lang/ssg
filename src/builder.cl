@@ -155,6 +155,7 @@ fn builder_run_all(cfg: SsgConfig) -> BuildReport:
             total_bins = total_bins + 1
 
     // Static Assets
+    sys_run("mkdir -p " + cfg.dist_dir + "/static")
     css_src := cfg.site_dir + "/static/style.css"
     css_dst := cfg.dist_dir + "/static/style.css"
     if file_exists(css_src) == 1:
