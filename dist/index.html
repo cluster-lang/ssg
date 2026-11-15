@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Next-Gen Ultra-Fast Static Site Generator - Cluster SSG</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="site-header">
+  <div class="container nav-wrapper">
+    <a href="/index.html" class="brand">
+      <span class="logo-icon">⚡</span>
+      <span class="brand-text">Cluster<strong>SSG</strong></span>
+    </a>
+    <nav class="nav-menu">
+      <a href="/index.html">Home</a>
+      <a href="/about.html">About</a>
+      <a href="/docs.html">Docs</a>
+      <a href="/hello-cluster-ssg.html">Blog</a>
+      <span class="badge-zero-js">0kb JS</span>
+    </nav>
+  </div>
+</header>
+
+  <main class="container">
+    <h1 id="welcome-to-cluster-ssg-">Welcome to Cluster-SSG ⚡</h1>
+<p>Cluster-SSG is a <strong>next-generation Static Site Generator</strong> written in <strong>100% Pure Cluster Language</strong> with zero external dependencies.</p>
+<p>It unifies the three best concepts from modern web engineering:</p>
+<ul>
+  <li><strong>Jekyll Conventions:</strong> Clean directories, intuitive frontmatter headers, and layout inheritance.</li>
+  <li><strong>Hugo Speed:</strong> Single-pass compiler generating over 25,000 pages per second natively via LLVM.</li>
+  <li><strong>Astro Islands Architecture:</strong> Zero JavaScript overhead by default, with selective client hydration only where interactivity is required.</li>
+</ul>
+<hr />
+<h2 id="interactive-island-component-demo">Interactive Island Component Demo</h2>
+<p>Below is an interactive Astro-style component island rendered directly from <code>.cld</code> using <code>client:load</code>:</p>
+<cluster-island data-island="Counter" data-client="load" count="0">
+  <!-- Astro-style Island Component: Counter (load) -->
+  <div class="cluster-island-placeholder" id="island-counter">
+    <span>[Interactive Island: Counter]</span>
+  </div>
+</cluster-island>
+<p>Notice that the rest of this page contains <strong>0 bytes of JavaScript</strong>. Only the isolated Counter island hydrates on the client!</p>
+<hr />
+<h2 id="native--cld-document--binary-wire-security">Native .cld Document & Binary Wire Security</h2>
+<p>Cluster-SSG replaces slow, unparsed Markdown and JSON with <strong>native <code>.cld</code> (Cluster Document)</strong> and <strong><code>.clb</code> (Cluster Binary Bundle)</strong> formats.</p>
+<blockquote><strong>Default Page Code Security:</strong></blockquote>
+<blockquote>When running with <code>--binary</code>, Cluster-SSG streams pre-compiled binary bytecode bundles over the wire. Web scrapers and bots cannot read your templates or source code—pages are safely decoded directly in the browser!</blockquote>
+<pre><code class="language-cluster">// Example of native .cld document structure
+title: High Performance Web
+author: Alamgir ZK
+layout: post
+===
+# Pure Speed
+Compiled in 0.1ms directly to LLVM machine code.</code></pre>
+
+  </main>
+  <footer class="site-footer">
+  <div class="container footer-content">
+    <p>&copy; 2026 Cluster SSG &middot; Powered by <strong>Pure Cluster Language</strong> (Zero External Dependencies).</p>
+    <p class="footer-sub">Astro Islands &middot; Jekyll Simplicity &middot; Hugo Build Speed &middot; Native .cld Binary Bundles</p>
+  </div>
+</footer>
+
+</body>
+</html>

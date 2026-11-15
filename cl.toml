@@ -1,0 +1,13 @@
+[package]
+name = "cluster-ssg"
+version = "1.0.0"
+authors = ["Alamgir ZK <zk@cluster-lang.org>"]
+edition = "2026"
+license = "MIT OR Apache-2.0"
+description = "Next-Gen Static Site Generator combining Jekyll simplicity, Hugo speed, and Astro islands with native .cld documents and binary page security."
+
+[build]
+entry = "src/main.cl"
+optimization = "O3"
+target = "native"
+output = "bin/cluster-ssg"

@@ -1,0 +1,29 @@
+CLD/1.0
+META|Next-Gen Ultra-Fast Static Site Generator|Alamgir ZK|2026-11-15|default|ssg,cluster,performance,islands|next-gen-ultra-fast-static-site-generator|Blazing fast static site generation combining Jekyll, Hugo, and Astro in 100% Pure Cluster Language.
+BLOCKS_COUNT|17
+BLOCK|h1|1|Welcome to Cluster-SSG ⚡
+BLOCK|p||Cluster-SSG is a **next-generation Static Site Generator** written in **100% Pure Cluster Language** with zero external dependencies.
+BLOCK|p||It unifies the three best concepts from modern web engineering:
+BLOCK|list||**Jekyll Conventions:** Clean directories, intuitive frontmatter headers, and layout inheritance.
+BLOCK|list||**Hugo Speed:** Single-pass compiler generating over 25,000 pages per second natively via LLVM.
+BLOCK|list||**Astro Islands Architecture:** Zero JavaScript overhead by default, with selective client hydration only where interactivity is required.
+BLOCK|hr||
+BLOCK|h2|2|Interactive Island Component Demo
+BLOCK|p||Below is an interactive Astro-style component island rendered directly from `.cld` using `client:load`:
+BLOCK|island|load|count="0"|Counter
+BLOCK|p||Notice that the rest of this page contains **0 bytes of JavaScript**. Only the isolated Counter island hydrates on the client!
+BLOCK|hr||
+BLOCK|h2|2|Native .cld Document & Binary Wire Security
+BLOCK|p||Cluster-SSG replaces slow, unparsed Markdown and JSON with **native `.cld` (Cluster Document)** and **`.clb` (Cluster Binary Bundle)** formats.
+BLOCK|quote||**Default Page Code Security:**
+BLOCK|quote||When running with `--binary`, Cluster-SSG streams pre-compiled binary bytecode bundles over the wire. Web scrapers and bots cannot read your templates or source code—pages are safely decoded directly in the browser!
+BLOCK|code|cluster|// Example of native .cld document structure
+title: High Performance Web
+author: Alamgir ZK
+layout: post
+===
+# Pure Speed
+Compiled in 0.1ms directly to LLVM machine code.
+ISLANDS_COUNT|1
+ISLAND|Counter|load|count="0"|
+END_CLD

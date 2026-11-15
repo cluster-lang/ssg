@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ title }} - {{ site_name }}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  {{ include "navbar" }}
+  <article class="container post-container">
+    <header class="post-header">
+      <h1>{{ title }}</h1>
+      <div class="post-meta">
+        <span>By <strong>{{ author }}</strong></span> &middot;
+        <span>Published on {{ date }}</span> &middot;
+        <span>Tags: <em>{{ tags }}</em></span>
+      </div>
+    </header>
+    <div class="post-body">
+      {{ content }}
+    </div>
+  </article>
+  {{ include "footer" }}
+</body>
+</html>

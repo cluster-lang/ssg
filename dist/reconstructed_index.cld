@@ -1,0 +1,34 @@
+title: Next-Gen Ultra-Fast Static Site Generator
+author: Alamgir ZK
+date: 2026-11-15
+layout: default
+tags: ssg,cluster,performance,islands
+description: Blazing fast static site generation combining Jekyll, Hugo, and Astro in 100% Pure Cluster Language.
+===
+
+# Welcome to Cluster-SSG ⚡
+
+Cluster-SSG is a **next-generation Static Site Generator** written in **100% Pure Cluster Language** with zero external dependencies.
+
+It unifies the three best concepts from modern web engineering:
+
+## Interactive Island Component Demo
+
+Below is an interactive Astro-style component island rendered directly from `.cld` using `client:load`:
+
+<island name="count="0"" load />
+
+Notice that the rest of this page contains **0 bytes of JavaScript**. Only the isolated Counter island hydrates on the client!
+
+## Native .cld Document & Binary Wire Security
+
+Cluster-SSG replaces slow, unparsed Markdown and JSON with **native `.cld` (Cluster Document)** and **`.clb` (Cluster Binary Bundle)** formats.
+
+> **Default Page Code Security:**
+
+> When running with `--binary`, Cluster-SSG streams pre-compiled binary bytecode bundles over the wire. Web scrapers and bots cannot read your templates or source code—pages are safely decoded directly in the browser!
+
+```cluster
+// Example of native .cld document structure
+```
+

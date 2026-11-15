@@ -1,0 +1,49 @@
+CLD/1.0
+META|Cluster-SSG Documentation & Guide|Alamgir ZK|2026-11-15|default|docs,guide,cli,tutorial|cluster-ssg-documentation--guide|Complete CLI reference and syntax guide for Cluster-SSG.
+BLOCKS_COUNT|16
+BLOCK|h1|1|Documentation & CLI Guide 📖
+BLOCK|p||Get started with Cluster-SSG in seconds.
+BLOCK|h2|2|CLI Commands
+BLOCK|code|bash|# Build the entire static site into dist/
+cluster-ssg build
+
+# Start the preview development server on localhost:3000
+cluster-ssg serve
+
+# Start development server with binary wire security
+cluster-ssg serve --binary
+
+# Pack a .cld document into a .clb binary bundle
+cluster-ssg pack site/pages/index.cld dist/index.clb
+
+# Unpack a .clb binary bundle back to human-readable .cld
+cluster-ssg unpack dist/index.clb site/pages/reconstructed.cld
+
+# Run the Hugo-speed in-memory benchmark (1,000 pages)
+cluster-ssg bench
+BLOCK|hr||
+BLOCK|h2|2|The .cld Document Format
+BLOCK|p||Each `.cld` file contains a structured header followed by the `===` splitter:
+BLOCK|code|cld|title: My First Article
+author: Jane Doe
+date: 2026-11-15
+layout: post
+tags: cluster,web,tutorial
+description: A quick start guide.
+===
+
+# Heading 1
+This is a paragraph with **bold**, *italic*, and `inline code`.
+
+<island name="Counter" client:load count="10" />
+BLOCK|hr||
+BLOCK|h2|2|Component Islands & Partial Hydration
+BLOCK|p||Cluster-SSG supports 4 client hydration directives:
+BLOCK|list||`client:load` - Hydrates immediately on page load
+BLOCK|list||`client:idle` - Hydrates when browser enters idle state
+BLOCK|list||`client:visible` - Hydrates when the element enters viewport
+BLOCK|list||`client:zero-js` - Renders statically with zero client-side JavaScript
+BLOCK|island|visible||SearchModal
+ISLANDS_COUNT|1
+ISLAND|SearchModal|visible||
+END_CLD

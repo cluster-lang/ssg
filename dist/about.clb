@@ -1,0 +1,21 @@
+CLD/1.0
+META|About Cluster-SSG Architecture|Alamgir ZK|2026-11-15|default|architecture,compiler,llvm|about-cluster-ssg-architecture|Deep dive into the zero-dependency pure Cluster SSG architecture.
+BLOCKS_COUNT|15
+BLOCK|h1|1|About Cluster-SSG 🚀
+BLOCK|p||Cluster-SSG was created to solve the bloat and complexity of modern web frameworks.
+BLOCK|h2|2|Why Another SSG?
+BLOCK|p||Most static site generators force developers to choose between speed and modern component architecture:
+BLOCK|list||Jekyll is clean but slow on large sites (Ruby runtime).
+BLOCK|list||Hugo is fast (Go), but lacks component islands and partial hydration.
+BLOCK|list||Astro has great component islands, but requires a heavy Node.js runtime and thousands of `node_modules`.
+BLOCK|p||**Cluster-SSG delivers all three in a single standalone binary with ZERO external dependencies!**
+BLOCK|hr||
+BLOCK|h2|2|Core Technical Features
+BLOCK|list||**Pure Cluster Standard Library:** Zero C++ headers, zero npm packages.
+BLOCK|list||**Micro-Millisecond Compilation:** Generates 1,000 pages in under 40ms.
+BLOCK|list||**Component Islands:** Built-in `<island name="..." client:load />` partial hydration.
+BLOCK|list||**Binary Page Security:** Serves `.clb` binary bytecode for anti-scraping security.
+BLOCK|island|idle||ThemeToggle
+ISLANDS_COUNT|1
+ISLAND|ThemeToggle|idle||
+END_CLD

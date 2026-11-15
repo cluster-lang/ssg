@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cluster-SSG Documentation & Guide - Cluster SSG</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="site-header">
+  <div class="container nav-wrapper">
+    <a href="/index.html" class="brand">
+      <span class="logo-icon">⚡</span>
+      <span class="brand-text">Cluster<strong>SSG</strong></span>
+    </a>
+    <nav class="nav-menu">
+      <a href="/index.html">Home</a>
+      <a href="/about.html">About</a>
+      <a href="/docs.html">Docs</a>
+      <a href="/hello-cluster-ssg.html">Blog</a>
+      <span class="badge-zero-js">0kb JS</span>
+    </nav>
+  </div>
+</header>
+
+  <main class="container">
+    <h1 id="documentation--cli-guide-">Documentation & CLI Guide 📖</h1>
+<p>Get started with Cluster-SSG in seconds.</p>
+<h2 id="cli-commands">CLI Commands</h2>
+<pre><code class="language-bash"># Build the entire static site into dist/
+cluster-ssg build
+
+# Start the preview development server on localhost:3000
+cluster-ssg serve
+
+# Start development server with binary wire security
+cluster-ssg serve --binary
+
+# Pack a .cld document into a .clb binary bundle
+cluster-ssg pack site/pages/index.cld dist/index.clb
+
+# Unpack a .clb binary bundle back to human-readable .cld
+cluster-ssg unpack dist/index.clb site/pages/reconstructed.cld
+
+# Run the Hugo-speed in-memory benchmark (1,000 pages)
+cluster-ssg bench</code></pre>
+<hr />
+<h2 id="the--cld-document-format">The .cld Document Format</h2>
+<p>Each <code>.cld</code> file contains a structured header followed by the <code>===</code> splitter:</p>
+<pre><code class="language-cld">title: My First Article
+author: Jane Doe
+date: 2026-11-15
+layout: post
+tags: cluster,web,tutorial
+description: A quick start guide.
+===
+
+# Heading 1
+This is a paragraph with **bold**, *italic*, and `inline code`.
+
+<island name="Counter" client:load count="10" /></code></pre>
+<hr />
+<h2 id="component-islands--partial-hydration">Component Islands & Partial Hydration</h2>
+<p>Cluster-SSG supports 4 client hydration directives:</p>
+<ul>
+  <li><code>client:load</code> - Hydrates immediately on page load</li>
+  <li><code>client:idle</code> - Hydrates when browser enters idle state</li>
+  <li><code>client:visible</code> - Hydrates when the element enters viewport</li>
+  <li><code>client:zero-js</code> - Renders statically with zero client-side JavaScript</li>
+</ul>
+<cluster-island data-island="SearchModal" data-client="visible" >
+  <!-- Astro-style Island Component: SearchModal (visible) -->
+  <div class="cluster-island-placeholder" id="island-searchmodal">
+    <span>[Interactive Island: SearchModal]</span>
+  </div>
+</cluster-island>
+
+  </main>
+  <footer class="site-footer">
+  <div class="container footer-content">
+    <p>&copy; 2026 Cluster SSG &middot; Powered by <strong>Pure Cluster Language</strong> (Zero External Dependencies).</p>
+    <p class="footer-sub">Astro Islands &middot; Jekyll Simplicity &middot; Hugo Build Speed &middot; Native .cld Binary Bundles</p>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,29 @@
+title: Hello World from Cluster-SSG!
+author: Alamgir ZK
+date: 2026-11-15
+layout: post
+tags: blog,release,v1.0.0
+description: Announcing Cluster-SSG 1.0.0, the world's fastest static site generator written in pure Cluster.
+===
+
+# Announcing Cluster-SSG v1.0.0 🚀
+
+Today we are proud to announce **Cluster-SSG v1.0.0**, an ultra-fast, zero-dependency static site generator.
+
+## Key Highlights
+
+- **Pure Cluster:** 100% written in Cluster language (`.cl`), compiled via LLVM to native machine code.
+- **Native .cld Documents:** High-speed document AST format replacing Markdown and JSON.
+- **Astro Component Islands:** Zero client JavaScript by default with selective partial hydration.
+- **Binary Wire Page Security:** Stream `.clb` binary bytecode directly to browsers to protect source markup and prevent scraping.
+
+```cluster
+// Compiled natively with zero dependencies
+fn main() -> int:
+    println("Cluster SSG: Hugo Speed + Astro Islands + Jekyll Conventions")
+    return 0
+```
+
+> "Speed is not just a feature; it is the foundation of user trust and developer joy."
+
+Try it out today and experience next-generation static site generation!

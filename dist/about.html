@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About Cluster-SSG Architecture - Cluster SSG</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="site-header">
+  <div class="container nav-wrapper">
+    <a href="/index.html" class="brand">
+      <span class="logo-icon">⚡</span>
+      <span class="brand-text">Cluster<strong>SSG</strong></span>
+    </a>
+    <nav class="nav-menu">
+      <a href="/index.html">Home</a>
+      <a href="/about.html">About</a>
+      <a href="/docs.html">Docs</a>
+      <a href="/hello-cluster-ssg.html">Blog</a>
+      <span class="badge-zero-js">0kb JS</span>
+    </nav>
+  </div>
+</header>
+
+  <main class="container">
+    <h1 id="about-cluster-ssg-">About Cluster-SSG 🚀</h1>
+<p>Cluster-SSG was created to solve the bloat and complexity of modern web frameworks.</p>
+<h2 id="why-another-ssg">Why Another SSG?</h2>
+<p>Most static site generators force developers to choose between speed and modern component architecture:</p>
+<ul>
+  <li>Jekyll is clean but slow on large sites (Ruby runtime).</li>
+  <li>Hugo is fast (Go), but lacks component islands and partial hydration.</li>
+  <li>Astro has great component islands, but requires a heavy Node.js runtime and thousands of <code>node_modules</code>.</li>
+</ul>
+<p><strong>Cluster-SSG delivers all three in a single standalone binary with ZERO external dependencies!</strong></p>
+<hr />
+<h2 id="core-technical-features">Core Technical Features</h2>
+<ul>
+  <li><strong>Pure Cluster Standard Library:</strong> Zero C++ headers, zero npm packages.</li>
+  <li><strong>Micro-Millisecond Compilation:</strong> Generates 1,000 pages in under 40ms.</li>
+  <li><strong>Component Islands:</strong> Built-in <code><island name="..." client:load /></code> partial hydration.</li>
+  <li><strong>Binary Page Security:</strong> Serves <code>.clb</code> binary bytecode for anti-scraping security.</li>
+</ul>
+<cluster-island data-island="ThemeToggle" data-client="idle" >
+  <!-- Astro-style Island Component: ThemeToggle (idle) -->
+  <div class="cluster-island-placeholder" id="island-themetoggle">
+    <span>[Interactive Island: ThemeToggle]</span>
+  </div>
+</cluster-island>
+
+  </main>
+  <footer class="site-footer">
+  <div class="container footer-content">
+    <p>&copy; 2026 Cluster SSG &middot; Powered by <strong>Pure Cluster Language</strong> (Zero External Dependencies).</p>
+    <p class="footer-sub">Astro Islands &middot; Jekyll Simplicity &middot; Hugo Build Speed &middot; Native .cld Binary Bundles</p>
+  </div>
+</footer>
+
+</body>
+</html>
