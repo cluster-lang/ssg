@@ -1,6 +1,9 @@
 // ==============================================================================
-// Cluster-SSG: Built-in HTTP Development & Binary Streaming Server (src/server.cl)
-// 100% Pure Cluster Language · Zero External Dependencies
+// Module:      Development Server & Binary Streamer (server.cl)
+// Project:     Cluster SSG (Static Site Generator & Binary Wire Engine)
+// Author:      Zaid Alamgir (ZK Company)
+// License:     MIT License
+// Description: Local HTTP server, live-reload listener, and secure binary wire stream handler.
 // ==============================================================================
 
 import "std/cld.cl"

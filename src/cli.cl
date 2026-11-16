@@ -1,6 +1,9 @@
 // ==============================================================================
-// Cluster-SSG: Command Line Interface & Dispatcher (src/cli.cl)
-// 100% Pure Cluster Language · Zero External Dependencies
+// Module:      Command Line Interface & Dispatcher (cli.cl)
+// Project:     Cluster SSG (Static Site Generator & Binary Wire Engine)
+// Author:      Zaid Alamgir (ZK Company)
+// License:     MIT License
+// Description: Command line banner, syntax help, and command dispatch routines.
 // ==============================================================================
 
 import "std/cld.cl"
@@ -10,6 +13,11 @@ import "src/islands.cl"
 import "src/builder.cl"
 import "src/server.cl"
 
+// ------------------------------------------------------------------------------
+// Function: cli_print_banner
+// Syntax:   fn cli_print_banner() -> void
+// Purpose:  Displays tool branding and architectural summary.
+// ------------------------------------------------------------------------------
 fn cli_print_banner() -> void:
     println("=================================================================")
     println("     CLUSTER-SSG: Next-Gen Blazing-Fast Static Site Generator    ")
@@ -17,6 +25,11 @@ fn cli_print_banner() -> void:
     println("         Native .cld Documents & Secure Binary Wire Engine       ")
     println("=================================================================")
 
+// ------------------------------------------------------------------------------
+// Function: cli_print_usage
+// Syntax:   fn cli_print_usage() -> void
+// Purpose:  Outputs CLI commands, parameters, and invocation syntax.
+// ------------------------------------------------------------------------------
 fn cli_print_usage() -> void:
     println("Usage: cluster-ssg <command> [options]\n")
     println("Commands:")
@@ -27,6 +40,11 @@ fn cli_print_usage() -> void:
     println("  bench                 Run Hugo-speed high-throughput benchmark (1,000 pages)")
     println("  new <site-name>       Scaffold a new production-ready Cluster SSG website")
 
+// ------------------------------------------------------------------------------
+// Function: cli_run_build
+// Syntax:   fn cli_run_build(cfg: SsgConfig) -> int
+// Purpose:  Executes the complete site compilation pipeline and prints metric summaries.
+// ------------------------------------------------------------------------------
 fn cli_run_build(cfg: SsgConfig) -> int:
     println("[1/3] Loading layouts, components, and islands...")
     println("[2/3] Compiling .cld pages and posts...")

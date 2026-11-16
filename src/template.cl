@@ -1,6 +1,9 @@
 // ==============================================================================
-// Cluster-SSG: Template & Layout Engine (src/template.cl)
-// 100% Pure Cluster Language · Zero External Dependencies
+// Module:      Template & Layout Engine (template.cl)
+// Project:     Cluster SSG (Static Site Generator & Binary Wire Engine)
+// Author:      Zaid Alamgir (ZK Company)
+// License:     MIT License
+// Description: Layout inheritance, variable substitution, and partial inclusion pipeline.
 // ==============================================================================
 
 import "std/cld.cl"

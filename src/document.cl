@@ -1,6 +1,9 @@
 // ==============================================================================
-// Cluster-SSG: Core Document Model & Binary Pipeline (src/cld.cl)
-// 100% Pure Cluster Language · Zero External Dependencies
+// Module:      Document Models & Metric Pipeline (document.cl)
+// Project:     Cluster SSG (Static Site Generator & Binary Wire Engine)
+// Author:      Zaid Alamgir (ZK Company)
+// License:     MIT License
+// Description: Document metadata structures, word count algorithms, and reading time estimation.
 // ==============================================================================
 
 import "std/cld.cl"

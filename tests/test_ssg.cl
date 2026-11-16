@@ -1,6 +1,10 @@
 // ==============================================================================
-// Cluster-SSG: Automated Verification Test Suite (tests/test_ssg.cl)
-// 100% Pure Cluster Language · Zero External Dependencies
+// Module:      Automated Verification Suite (tests/test_ssg.cl)
+// Project:     Cluster SSG (Static Site Generator & Binary Wire Engine)
+// Author:      Zaid Alamgir (ZK Company)
+// License:     MIT License
+// Description: Multi-phase unit and integration test suite covering .cld parsing,
+//              binary packaging (.clb), layout inheritance, zero-JS islands, and build pipeline.
 // ==============================================================================
 
 import "std/cld.cl"

@@ -1,7 +1,9 @@
-# ⚡ Cluster-SSG: Next-Generation Static Site Generator
+# Cluster SSG: Static Site Generator & Binary Wire Engine
 
-> **100% Pure Cluster Language · Zero External Dependencies · Native LLVM Machine Code**  
-> Combines **Jekyll's simplicity**, **Hugo's blazing speed**, and **Astro's zero-JS component islands architecture** with native `.cld` documents and default binary wire security.
+**Author:** Zaid Alamgir (ZK Company)  
+**License:** MIT License  
+
+A high-speed, lightweight static site generator and binary wire engine implemented in Cluster with zero external runtime dependencies. Combines Jekyll conventions, Hugo compilation speed, and Astro zero-JS component islands with native `.cld` documents and `.clb` binary bundle security.
 
 ---
 

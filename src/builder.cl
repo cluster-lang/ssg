@@ -1,7 +1,9 @@
 // ==============================================================================
-// Cluster-SSG: Static Build Pipeline (src/builder.cl)
-// Hugo-Speed Multi-Page Compilation Engine
-// 100% Pure Cluster Language · Zero External Dependencies
+// Module:      Static Site Build Pipeline (builder.cl)
+// Project:     Cluster SSG (Static Site Generator & Binary Wire Engine)
+// Author:      Zaid Alamgir (ZK Company)
+// License:     MIT License
+// Description: High-speed multi-page compilation engine, sitemap generator, and binary bundle packager.
 // ==============================================================================
 
 import "std/cld.cl"

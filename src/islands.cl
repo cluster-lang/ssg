@@ -1,7 +1,9 @@
 // ==============================================================================
-// Cluster-SSG: Component Islands Architecture Engine (src/islands.cl)
-// Astro-Style Partial Hydration & Zero-JS by Default
-// 100% Pure Cluster Language · Zero External Dependencies
+// Module:      Component Islands Engine (islands.cl)
+// Project:     Cluster SSG (Static Site Generator & Binary Wire Engine)
+// Author:      Zaid Alamgir (ZK Company)
+// License:     MIT License
+// Description: Zero-JS by default component islands and client partial hydration pipeline.
 // ==============================================================================
 
 import "std/cld.cl"

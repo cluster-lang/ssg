@@ -1,6 +1,9 @@
 // ==============================================================================
-// Cluster-SSG: Main Application Driver (src/main.cl)
-// 100% Pure Cluster Language · Zero External Dependencies
+// Module:      Main Application Driver (main.cl)
+// Project:     Cluster SSG (Static Site Generator & Binary Wire Engine)
+// Author:      Zaid Alamgir (ZK Company)
+// License:     MIT License
+// Description: Application entrypoint, configuration loader, and build dispatcher.
 // ==============================================================================
 
 import "std/cld.cl"
@@ -11,6 +14,11 @@ import "src/builder.cl"
 import "src/server.cl"
 import "src/cli.cl"
 
+// ------------------------------------------------------------------------------
+// Function: main
+// Syntax:   fn main() -> int
+// Purpose:  CLI entrypoint. Detects binary mode flag and executes static build pipeline.
+// ------------------------------------------------------------------------------
 fn main() -> int:
     cli_print_banner()
 
