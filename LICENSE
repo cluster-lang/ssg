@@ -1,17 +1,36 @@
-MIT License
+Cluster Community & Fair-Source License (CCFL v1.0 / MIT-Conditional)
 
-Copyright (c) 2026 Zaid Alamgir (ZK Company)
+Copyright (c) 2026 mohammadzaid/(cluster) <zkalamgir@proton.me>
+All rights reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+1. PERMITTED INDEPENDENT & RESEARCH USE:
+Permission is hereby granted, free of charge, to any individual developer,
+freelance engineer, student, educator, academic researcher, non-profit
+organization, or scientific research group to obtain a copy of this software
+and associated documentation files (the "Software"), to deal in the Software
+without restriction, including without limitation the rights to use, copy,
+modify, merge, publish, distribute, and compile the Software, subject to the
+following conditions:
 
 The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
 
+2. COMMERCIAL USE RESTRICTIONS:
+Any use of the Software, its compiler, runtime components, standard library,
+or compiled output by for-profit commercial entities, companies, corporate
+enterprises, or startups for revenue-generating operations, commercial products,
+proprietary closed-source services, or SaaS offerings requires a valid commercial
+license from the copyright holder.
+
+To request a commercial license, contact: zkalamgir@proton.me
+
+3. CONTRIBUTIONS & ZERO-DEPENDENCY GUARANTEE:
+All contributions to this repository are welcomed under these license terms.
+All contributed modules, standard libraries, and tools must be written in
+100% pure Cluster without external C/C++ third-party library dependencies,
+ensuring standalone portability across x86-64, ARM, and embedded systems.
+
+4. WARRANTY DISCLAIMER:
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE

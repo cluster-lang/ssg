@@ -1,9 +1,14 @@
 # Cluster SSG: Static Site Generator & Binary Wire Engine
 
-**Author:** Zaid Alamgir (ZK Company)  
-**License:** MIT License  
+> [!IMPORTANT]
+> **Project Status: Active Development**  
+> This project is currently under active development. Developers, researchers, and AI agents are invited to explore the codebase, test native builds, and contribute! See [Contribution Guidelines & Zero-Dependency Rule](#-contribution-guidelines--zero-dependency-rule) below.
 
-A high-speed, lightweight static site generator and binary wire engine implemented in Cluster with zero external runtime dependencies. Combines Jekyll conventions, Hugo compilation speed, and Astro zero-JS component islands with native `.cld` documents and `.clb` binary bundle security.
+**Author:** mohammadzaid/(cluster) <zkalamgir@proton.me>  
+**Organization:** [cluster-lang](https://github.com/cluster-lang)  
+**License:** Cluster Community & Fair-Source License (CCFL v1.0 / MIT-Conditional)  
+
+A high-speed, lightweight static site generator and binary wire engine implemented in pure Cluster with zero external runtime dependencies. Combines Jekyll conventions, Hugo compilation speed, and Astro zero-JS component islands with native `.cld` documents and `.clb` binary bundle security.
 
 ---
 
@@ -166,5 +171,24 @@ cl run tests/test_ssg.cl
 
 ---
 
-## 📜 License
-Licensed under **MIT OR Apache-2.0**. Crafted with pride for the Cluster ecosystem.
+## 🤝 Contribution Guidelines & Zero-Dependency Rule
+
+The fundamental mission of **Cluster** is to eliminate external dependency bloat and provide a self-contained, high-performance ecosystem.
+
+### Core Rules for Contributions:
+1. **100% Pure Cluster (`.cl`):** All generators, layout parsers, and loaders must be written purely in Cluster.
+2. **Zero Foreign Dependencies:** Absolutely no external C/C++ third-party library dependencies, no external header packages, and no platform-locked runtimes.
+3. **Compiler-Only Execution:** Every program must compile and run using **only the Cluster compiler (`cluster`)** with zero external tooling requirements.
+4. **Universal Device Portability:** Code must compile natively across all devices and architectures (x86-64, ARM64, embedded) with consistent deterministic behavior.
+
+---
+
+## 📜 License & Commercial Terms
+
+This software is released under the **Cluster Community & Fair-Source License (CCFL v1.0 / MIT-Conditional)**:
+
+- **100% Free for Independent & Research Use:**
+  - Individual software developers, students, educators, academic researchers, non-profits, and scientific research groups have full rights to inspect, run, modify, compile, and contribute without any license fees.
+- **Commercial Enterprise License Required:**
+  - Commercial companies, startups, and for-profit businesses using Cluster SSG in commercial products, SaaS services, proprietary closed-source systems, or revenue-generating operations are required to purchase a commercial license.
+  - Contact: **`zkalamgir@proton.me`** (`mohammadzaid/(cluster)`).

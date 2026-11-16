@@ -1,9 +1,9 @@
 [package]
 name = "cluster-ssg"
 version = "1.0.0"
-authors = ["Zaid Alamgir (ZK Company) <zaid@cluster-lang.org>"]
+authors = ["mohammadzaid/(cluster) <zkalamgir@proton.me>"]
 edition = "2026"
-license = "MIT"
+license = "CCFL-1.0 (MIT-Conditional)"
 description = "Next-Gen Static Site Generator combining Jekyll simplicity, Hugo speed, and Astro islands with native .cld documents and binary page security."
 
 [build]

@@ -1,8 +1,8 @@
 // ==============================================================================
 // Module:      Command Line Interface & Dispatcher (cli.cl)
 // Project:     Cluster SSG (Static Site Generator & Binary Wire Engine)
-// Author:      Zaid Alamgir (ZK Company)
-// License:     MIT License
+// Author:      mohammadzaid/(cluster) <zkalamgir@proton.me>
+// License:     Cluster Community // License:     MIT License Fair-Source License (CCFL-1.0)
 // Description: Command line banner, syntax help, and command dispatch routines.
 // ==============================================================================
 
