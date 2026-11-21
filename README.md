@@ -6,7 +6,7 @@
 
 **Author:** mohammadzaid/(cluster) <zkalamgir@proton.me>  
 **Organization:** [cluster-lang](https://github.com/cluster-lang)  
-**License:** Cluster Community & Fair-Source License (CCFL v1.0 / MIT-Conditional)  
+**License:** Cluster Community & Fair-Source License (CCFL v2.0 / Strict-Distribution)  
 
 A high-speed, lightweight static site generator and binary wire engine implemented in pure Cluster with zero external runtime dependencies. Combines Jekyll conventions, Hugo compilation speed, and Astro zero-JS component islands with native `.cld` documents and `.clb` binary bundle security.
 
@@ -185,7 +185,7 @@ The fundamental mission of **Cluster** is to eliminate external dependency bloat
 
 ## 📜 License & Commercial Terms
 
-This software is released under the **Cluster Community & Fair-Source License (CCFL v1.0 / MIT-Conditional)**:
+This software is released under the **Cluster Community & Fair-Source License (CCFL v2.0 / Strict-Distribution)**:
 
 - **100% Free for Independent & Research Use:**
   - Individual software developers, students, educators, academic researchers, non-profits, and scientific research groups have full rights to inspect, run, modify, compile, and contribute without any license fees.

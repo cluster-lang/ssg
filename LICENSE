@@ -1,36 +1,42 @@
-Cluster Community & Fair-Source License (CCFL v1.0 / MIT-Conditional)
+Cluster Community & Fair-Source License (CCFL v2.0 / Strict-Distribution)
 
-Copyright (c) 2026 mohammadzaid/(cluster) <zkalamgir@proton.me>
+Copyright (c) 2026 Mohammad Zaid (zk-mohammad) / Cluster Organization
+Official Repository: https://github.com/cluster-lang/ssg
+Author Account: https://github.com/zk-mohammad
 All rights reserved.
 
-1. PERMITTED INDEPENDENT & RESEARCH USE:
+1. PERMITTED INDEPENDENT, ACADEMIC & RESEARCH USE:
 Permission is hereby granted, free of charge, to any individual developer,
-freelance engineer, student, educator, academic researcher, non-profit
-organization, or scientific research group to obtain a copy of this software
-and associated documentation files (the "Software"), to deal in the Software
-without restriction, including without limitation the rights to use, copy,
-modify, merge, publish, distribute, and compile the Software, subject to the
-following conditions:
+student, educator, academic researcher, non-profit organization, or community
+developer to obtain, download, test, run, and use this static site generator
+("the Software") for personal, educational, and development purposes, subject to
+the conditions herein.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+2. TOOL INTEGRITY, ANTI-TAMPERING & CANONICAL DISTRIBUTION:
+The pure Cluster Language SSG implementation, template engines, static site compiler,
+and binaries belong exclusively to Mohammad Zaid (GitHub: zk-mohammad) and the
+official Cluster Organization (https://github.com/cluster-lang).
 
-2. COMMERCIAL USE RESTRICTIONS:
-Any use of the Software, its compiler, runtime components, standard library,
-or compiled output by for-profit commercial entities, companies, corporate
-enterprises, or startups for revenue-generating operations, commercial products,
-proprietary closed-source services, or SaaS offerings requires a valid commercial
+To maintain security, web safety, and prevent rogue generator exploits:
+- Unauthorized duplication, modified binary distribution, rogue forks, and
+  third-party mirroring claiming official status are STRICTLY PROHIBITED.
+- Exactly ONE canonical repository distribution exists, officially published under
+  https://github.com/cluster-lang/ssg.
+- All duplicate copies, unauthorized forks, or third-party mirrors are strictly
+  INVALID and unauthorized.
+
+3. COMMERCIAL USE RESTRICTIONS:
+Packaging or bundling this software into commercial closed-source proprietary
+distributions by for-profit corporate entities requires an explicit commercial
 license from the copyright holder.
 
-To request a commercial license, contact: zkalamgir@proton.me
+Commercial licensing inquiries: zkalamgir@proton.me
 
-3. CONTRIBUTIONS & ZERO-DEPENDENCY GUARANTEE:
-All contributions to this repository are welcomed under these license terms.
-All contributed modules, standard libraries, and tools must be written in
-100% pure Cluster without external C/C++ third-party library dependencies,
-ensuring standalone portability across x86-64, ARM, and embedded systems.
+4. CONTRIBUTIONS & STRICT PURE CLUSTER MANDATE:
+All contributions to this repository must be 100% pure Cluster language code (.cl).
+External C/C++, Ruby/Jekyll bindings, or external markdown runtimes are strictly forbidden.
 
-4. WARRANTY DISCLAIMER:
+5. WARRANTY DISCLAIMER:
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE

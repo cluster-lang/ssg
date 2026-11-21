@@ -1,6 +1,0 @@
-[
-  {"title": "About Cluster-SSG Architecture", "url": "/about.html", "desc": "Deep dive into the zero-dependency pure Cluster SSG architecture.", "category": "page"},
-  {"title": "Cluster-SSG Documentation & Guide", "url": "/docs.html", "desc": "Complete CLI reference and syntax guide for Cluster-SSG.", "category": "page"},
-  {"title": "The Cluster Book — Official Language Guide", "url": "/index.html", "desc": "Learn Cluster-lang from the ground up. A high-performance systems language with Pythonic readability and C++ execution speed.", "category": "page"},
-  {"title": "Hello World from Cluster-SSG!", "url": "/hello-cluster-ssg.html", "desc": "Announcing Cluster-SSG 1.0.0, the world's fastest static site generator written in pure Cluster.", "category": "post"}
-]

@@ -1,9 +1,0 @@
-{
-    "files.associations": {
-        "*.cld": "markdown"
-    },
-    "markdown.preview.breaks": true,
-    "markdown.styles": [
-        "${workspaceFolder}/site/static/style.css"
-    ]
-}

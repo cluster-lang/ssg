@@ -1,0 +1,18 @@
+# ==============================================================================
+# Cluster SSG: Git Ignore
+# ==============================================================================
+
+# Cache and IDE artifacts
+.cl_cache/
+.vscode/
+
+# Build and output artifacts
+dist/
+bin/
+!bin/cluster-ssg
+!bin/cluster-ssg-core
+*.out
+*.o
+*.tmp
+*.log
+.DS_Store
