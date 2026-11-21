@@ -1,0 +1,18 @@
+# ==============================================================================
+# Cluster Language: GitHub Linguist & Git Attributes Configuration
+# ==============================================================================
+
+# Custom language mapping for Cluster Language files
+*.cl linguist-language=Cluster
+*.zk linguist-language=Cluster
+*.cld linguist-language=Cluster
+*.clc linguist-language=Cluster
+*.cls linguist-language=Cluster
+*.clb linguist-language=Cluster
+*.clw linguist-language=Cluster
+
+# Ignore compiled runtime objects, binaries, and generated assets from language stats
+lib/runtime/** linguist-vendored
+*.o linguist-vendored
+bin/** linguist-vendored
+dist/** linguist-vendored
