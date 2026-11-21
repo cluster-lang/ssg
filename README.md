@@ -188,7 +188,7 @@ The fundamental mission of **Cluster** is to eliminate external dependency bloat
 This software is released under the **Cluster Community & Fair-Source License (CCFL v2.0 / Strict-Distribution)**:
 
 - **100% Free for Independent & Research Use:**
-  - Individual software developers, students, educators, academic researchers, non-profits, and scientific research groups have full rights to inspect, run, modify, compile, and contribute without any license fees.
+  - Individual software developers, students, educators, academic researchers, non-profits, and scientific research groups have full rights to inspect, test, run, compile, and contribute without any license fees (any modification or derivative reproduction strictly requires prior written permission, including for research).
 - **Commercial Enterprise License Required:**
   - Commercial companies, startups, and for-profit businesses using Cluster SSG in commercial products, SaaS services, proprietary closed-source systems, or revenue-generating operations are required to purchase a commercial license.
   - Contact: **`zkalamgir@proton.me`** (`mohammadzaid/(cluster)`).

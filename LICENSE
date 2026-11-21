@@ -11,6 +11,10 @@ student, educator, academic researcher, non-profit organization, or community
 developer to obtain, download, test, run, and use this static site generator
 ("the Software") for personal, educational, and development purposes, subject to
 the conditions herein.
+Any modification, alteration, patching, decompilation, or derivative compilation
+of the Software (including for academic, educational, or research purposes) strictly
+requires prior written permission and explicit authorization from the copyright holder.
+
 
 2. TOOL INTEGRITY, ANTI-TAMPERING & CANONICAL DISTRIBUTION:
 The pure Cluster Language SSG implementation, template engines, static site compiler,
