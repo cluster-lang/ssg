@@ -1,451 +1,774 @@
 // ==============================================================================
-// Module:      Static Site Build Pipeline (builder.cl)
-// Project:     Cluster SSG (Static Site Generator & Binary Wire Engine)
-// Author:      mohammadzaid/(cluster) <zkalamgir@proton.me>
-// License:     Cluster Community // License:     MIT License Fair-Source License (CCFL-1.0)
-// Description: High-speed multi-page compilation engine, sitemap generator, and binary bundle packager.
+// Module:      Universal Multi-Core Static Site Builder (src/builder.cl)
+// Project:     Cluster SSG (Unifying Jekyll + Hugo + Astro in Pure .cl)
+// Description: Zero-hardcoding static site compiler uniting:
+//              - Recursive .cld/.md/.clx content discovery
+//              - Multi-level Liquid layouts & partial includes + data/*.yml|toml|json
+//              - Typed Content Collections schema validation & [slug] dynamic routes
+//              - Hugo-speed parallel multi-core compilation + per-page arena reset
+//              - Dynamic tags, categories, blog pagination, i18n hreflang, SEO tags,
+//                sitemap.xml, feed.xml (RSS 2.0), atom.xml, robots.txt, search-index.json
+//              - Asset minification, content hashing, .gz compression & .ssg_cache
 // ==============================================================================
 
 import "std/cld.cl"
+import "src/strbuf.cl"
+import "src/fs_walk.cl"
+import "src/config.cl"
+import "src/frontmatter.cl"
+import "src/markdown.cl"
+import "src/template_v2.cl"
+import "src/collections.cl"
+import "src/clx_compiler.cl"
+import "src/islands_v2.cl"
+import "src/assets.cl"
 import "src/document.cl"
-import "src/template.cl"
-import "src/islands.cl"
-
-model SsgConfig:
-    site_name: string
-    site_tagline: string
-    base_url: string
-    site_dir: string
-    dist_dir: string
-    output_binary: int
 
 model BuildReport:
     pages_built: int
+    posts_built: int
+    assets_copied: int
     binary_bundles_packed: int
     build_time_ms: int
     total_bytes_written: int
-
-fn config_default() -> SsgConfig:
-    return SsgConfig("Cluster SSG", "Next-Gen Blazing Fast Static Site Generator", "http://localhost:3000", "site", "dist", 0)
+    skipped_incremental: int
+    schema_errors: int
 
 fn builder_init_templates(cfg: SsgConfig) -> TemplateRegistry:
     tr := template_new()
-    
     ob := "{" + "{"
     cb := "}" + "}"
-    
-    // Check and load layout files
-    def_layout_path := cfg.site_dir + "/layouts/default.html"
-    if file_exists(def_layout_path) == 1:
-        template_register_layout(tr, "default", file_read(def_layout_path))
-    else:
-        // Default built-in layout
-        built_in_default := "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <title>" + ob + " title " + cb + " - " + ob + " site_name " + cb + "</title>\n  <link rel=\"stylesheet\" href=\"/static/style.css\">\n</head>\n<body>\n  " + ob + " include \"navbar\" " + cb + "\n  <main class=\"main-content\">\n    " + ob + " content " + cb + "\n  </main>\n  " + ob + " include \"footer\" " + cb + "\n</body>\n</html>"
-        template_register_layout(tr, "default", built_in_default)
 
-    post_layout_path := cfg.site_dir + "/layouts/post.html"
-    if file_exists(post_layout_path) == 1:
-        template_register_layout(tr, "post", file_read(post_layout_path))
-    else:
-        built_in_post := "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <title>" + ob + " title " + cb + " - " + ob + " site_name " + cb + "</title>\n  <link rel=\"stylesheet\" href=\"/static/style.css\">\n</head>\n<body>\n  " + ob + " include \"navbar\" " + cb + "\n  <article class=\"post-container\">\n    <header class=\"post-header\">\n      <h1>" + ob + " title " + cb + "</h1>\n      <div class=\"post-meta\">By <strong>" + ob + " author " + cb + "</strong> &middot; " + ob + " date " + cb + " &middot; Tags: <em>" + ob + " tags " + cb + "</em></div>\n    </header>\n    <div class=\"post-body\">\n      " + ob + " content " + cb + "\n    </div>\n  </article>\n  " + ob + " include \"footer\" " + cb + "\n</body>\n</html>"
-        template_register_layout(tr, "post", built_in_post)
+    // Built-in default fallbacks (overridden automatically by site/layouts/* & site/components/*)
+    built_in_nav := "<header class=\"site-header\"><nav class=\"nav-bar\"><div class=\"brand\"><a href=\"/\"><strong>" + ob + " site_name " + cb + "</strong></a></div><div class=\"nav-links\"><a href=\"/\">Home</a><a href=\"/blog/index.html\">Blog</a><a href=\"/tags/index.html\">Tags</a><a href=\"/about.html\">About</a><a href=\"/docs.html\">Docs</a></div></nav></header>"
+    built_in_foot := "<footer class=\"site-footer\"><p>&copy; " + ob + " year " + cb + " " + ob + " site_name " + cb + " &middot; Powered by Cluster-SSG</p></footer>"
+    built_in_default := "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <title>" + ob + " title " + cb + " - " + ob + " site_name " + cb + "</title>\n  <meta name=\"description\" content=\"" + ob + " description | escape " + cb + "\">\n  <link rel=\"stylesheet\" href=\"/static/style.css\">\n</head>\n<body>\n  " + ob + " include \"navbar\" " + cb + "\n  <main class=\"main-content\">\n    " + ob + " content " + cb + "\n  </main>\n  " + ob + " include \"footer\" " + cb + "\n</body>\n</html>"
+    built_in_post := "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <title>" + ob + " title " + cb + " - " + ob + " site_name " + cb + "</title>\n  <meta name=\"description\" content=\"" + ob + " description | escape " + cb + "\">\n  <link rel=\"stylesheet\" href=\"/static/style.css\">\n</head>\n<body>\n  " + ob + " include \"navbar\" " + cb + "\n  <article class=\"post-container\">\n    <header class=\"post-header\">\n      <h1>" + ob + " title " + cb + "</h1>\n      <div class=\"post-meta\">By <strong>" + ob + " author | default: \"Author\" " + cb + "</strong> &middot; " + ob + " date " + cb + "</div>\n    </header>\n    <div class=\"post-body\">\n      " + ob + " content " + cb + "\n    </div>\n  </article>\n  " + ob + " include \"footer\" " + cb + "\n</body>\n</html>"
 
-    chap_layout_path := cfg.site_dir + "/layouts/chapter.html"
-    if file_exists(chap_layout_path) == 1:
-        template_register_layout(tr, "chapter", file_read(chap_layout_path))
+    template_register_layout(tr, "default", built_in_default)
+    template_register_layout(tr, "post", built_in_post)
+    template_register_include(tr, "navbar", built_in_nav)
+    template_register_include(tr, "footer", built_in_foot)
 
-    // Check and load components (includes)
-    side_path := cfg.site_dir + "/components/sidebar.html"
-    if file_exists(side_path) == 1:
-        template_register_include(tr, "sidebar", file_read(side_path))
+    let mut html_exts: vector[string] = []
+    html_exts.push(".html")
+    html_exts.push(".htm")
 
-    nav_path := cfg.site_dir + "/components/navbar.html"
-    if file_exists(nav_path) == 1:
-        template_register_include(tr, "navbar", file_read(nav_path))
-    else:
-        built_in_nav := "<header class=\"site-header\"><nav class=\"nav-bar\"><div class=\"brand\"><a href=\"/\"><strong>" + ob + " site_name " + cb + "</strong></a></div><div class=\"nav-links\"><a href=\"/\">Home</a><a href=\"/about.html\">About</a><a href=\"/docs.html\">Docs</a><a href=\"/posts.html\">Articles</a></div></nav></header>"
-        template_register_include(tr, "navbar", built_in_nav)
+    // Auto-discover all layouts recursively
+    let mut ldirs: vector[string] = []
+    ldirs.push(ssg_path_join(cfg.site_dir, "layouts"))
+    ldirs.push(ssg_path_join(cfg.site_dir, "_layouts"))
+    let mut ldi: int = 0
+    while ldi < len(ldirs):
+        d := ldirs[ldi]
+        if fs_is_dir(d) == 1:
+            scan := fs_walk_tree(d, html_exts)
+            let mut fi: int = 0
+            while fi < len(scan.abs_paths):
+                ap := scan.abs_paths[fi]
+                rel := scan.rel_paths[fi]
+                ext := ssg_path_ext(rel)
+                name_no_ext := substring(rel, 0, string_length(rel) - string_length(ext))
+                content := file_read(ap)
+                template_register_layout(tr, name_no_ext, content)
+                template_register_layout(tr, rel, content)
+                fi = fi + 1
+        ldi = ldi + 1
 
-    foot_path := cfg.site_dir + "/components/footer.html"
-    if file_exists(foot_path) == 1:
-        template_register_include(tr, "footer", file_read(foot_path))
-    else:
-        built_in_foot := "<footer class=\"site-footer\"><p>&copy; " + ob + " year " + cb + " " + ob + " site_name " + cb + " &middot; Built with 100% Pure Cluster Language (Zero Dependencies).</p></footer>"
-        template_register_include(tr, "footer", built_in_foot)
+    // Auto-discover all includes / components / partials recursively
+    let mut idirs: vector[string] = []
+    idirs.push(ssg_path_join(cfg.site_dir, "components"))
+    idirs.push(ssg_path_join(cfg.site_dir, "_components"))
+    idirs.push(ssg_path_join(cfg.site_dir, "includes"))
+    idirs.push(ssg_path_join(cfg.site_dir, "_includes"))
+    idirs.push(ssg_path_join(cfg.site_dir, "layouts/partials"))
+    let mut idi: int = 0
+    while idi < len(idirs):
+        d := idirs[idi]
+        if fs_is_dir(d) == 1:
+            scan := fs_walk_tree(d, html_exts)
+            let mut fi: int = 0
+            while fi < len(scan.abs_paths):
+                ap := scan.abs_paths[fi]
+                rel := scan.rel_paths[fi]
+                ext := ssg_path_ext(rel)
+                name_no_ext := substring(rel, 0, string_length(rel) - string_length(ext))
+                content := file_read(ap)
+                template_register_include(tr, name_no_ext, content)
+                template_register_include(tr, rel, content)
+                fi = fi + 1
+        idi = idi + 1
 
     return tr
 
-fn builder_compile_page(cfg: SsgConfig, tr: TemplateRegistry, islands: IslandRegistry, src_path: string, out_path: string) -> int:
-    doc := ssg_load_cld(src_path, out_path)
-    
-    // Step 1: Render layout template
-    page_html := template_render_page(tr, doc, cfg.site_name, cfg.site_tagline)
-    
-    // Step 2: Hydrate Islands (Astro Partial Hydration)
-    final_html := islands_hydrate_page(islands, doc.cld, page_html)
-    
-    // Step 3: Write HTML to dist
-    file_write(out_path, final_html)
-    let mut bytes_written: int = len(final_html)
+fn _builder_extract_chapter_num(slug: string) -> int:
+    if ssg_starts_with(slug, "chapter") == 0:
+        return -1
+    rest := substring(slug, 7, string_length(slug) - 7)
+    n := ssg_parse_int(rest, -1)
+    if n > 0:
+        return n
+    return -1
 
-    // Step 4: Write Packed Binary Bundle (.clb)
-    if cfg.output_binary == 1:
-        packed_bin := ssg_doc_to_binary(doc)
-        bin_out_path := out_path
-        if cld_starts_with(out_path, cfg.dist_dir + "/") == 1:
-            // Replace .html with .clb
-            if len(out_path) > 5 and substring(out_path, len(out_path) - 5, 5) == ".html":
-                bin_out_path = substring(out_path, 0, len(out_path) - 5) + ".clb"
+fn _builder_inject_seo(html: string, cfg: SsgConfig, title: string, desc: string, page_url: string, alt_langs_html: string) -> string:
+    if ssg_contains(html, "</head>") == 0 or ssg_contains(html, "property=\"og:title\"") == 1:
+        return html
+    canonical := cfg.base_url + page_url
+    sb := sb_new_cap(512)
+    sb_append(sb, "  <link rel=\"canonical\" href=\"" + ssg_escape_html(canonical) + "\" />\n")
+    sb_append(sb, "  <meta property=\"og:title\" content=\"" + ssg_escape_html(title) + "\" />\n")
+    sb_append(sb, "  <meta property=\"og:description\" content=\"" + ssg_escape_html(desc) + "\" />\n")
+    sb_append(sb, "  <meta property=\"og:url\" content=\"" + ssg_escape_html(canonical) + "\" />\n")
+    sb_append(sb, "  <meta property=\"og:type\" content=\"website\" />\n")
+    sb_append(sb, "  <meta name=\"twitter:card\" content=\"summary\" />\n")
+    sb_append(sb, alt_langs_html)
+    sb_append(sb, "</head>")
+    inj := sb_to_str(sb)
+    sb_free(sb)
+    return ssg_replace_all(html, "</head>", inj)
+
+fn _builder_render_single_doc(doc: SsgRichDoc, cfg: SsgConfig, tr: TemplateRegistry, clx_reg: ClxRegistry, islands: IslandRegistry, asset_man: AssetManifest, ctx: RenderContext, total_chapters: int, alt_langs_html: string) -> int:
+    let mut written: int = 0
+    arena:
+        let mut body: string = doc.md.html
+        // Inject dynamic chapter Prev/Next nav ONLY when document is a chapterN page
+        chap_n := _builder_extract_chapter_num(doc.slug)
+        if chap_n > 0 and total_chapters > 0:
+            nsb := sb_new_cap(256)
+            sb_append(nsb, "<div class=\"chapter-nav\">\n")
+            if chap_n > 1:
+                sb_append(nsb, "  <a href=\"/chapter" + str(chap_n - 1) + ".html\">&larr; Chapter " + str(chap_n - 1) + "</a>\n")
             else:
-                bin_out_path = out_path + ".clb"
-            file_write(bin_out_path, packed_bin)
-            bytes_written = bytes_written + len(packed_bin)
-
-    return bytes_written
-
-fn builder_compile_chapter(cfg: SsgConfig, tr: TemplateRegistry, islands: IslandRegistry, src_path: string, out_path: string, ci: int, total_chapters: int) -> int:
-    doc := ssg_load_cld(src_path, out_path)
-    
-    // Build bottom chapter navigation bar
-    let mut nav_html: string = "<div class=\"chapter-nav\">\n"
-    if ci > 1:
-        prev_idx := ci - 1
-        nav_html = nav_html + "  <a href=\"/chapter" + str(prev_idx) + ".html\">&larr; Chapter " + str(prev_idx) + "</a>\n"
-    else:
-        nav_html = nav_html + "  <span></span>\n"
-    
-    if ci < total_chapters:
-        next_idx := ci + 1
-        nav_html = nav_html + "  <a href=\"/chapter" + str(next_idx) + ".html\">Chapter " + str(next_idx) + " &rarr;</a>\n"
-    else:
-        nav_html = nav_html + "  <span></span>\n"
-    nav_html = nav_html + "</div>\n"
-    
-    // Append nav bar to chapter content body
-    doc.html_body = doc.html_body + "\n" + nav_html
-    
-    // Step 1: Render layout template
-    page_html := template_render_page(tr, doc, cfg.site_name, cfg.site_tagline)
-    
-    // Step 2: Hydrate Islands (Astro Partial Hydration)
-    final_html := islands_hydrate_page(islands, doc.cld, page_html)
-    
-    // Step 3: Write HTML to dist
-    file_write(out_path, final_html)
-    let mut bytes_written: int = len(final_html)
-
-    // Step 4: Write Packed Binary Bundle (.clb)
-    if cfg.output_binary == 1:
-        packed_bin := ssg_doc_to_binary(doc)
-        bin_out_path := out_path
-        if cld_starts_with(out_path, cfg.dist_dir + "/") == 1:
-            if len(out_path) > 5 and substring(out_path, len(out_path) - 5, 5) == ".html":
-                bin_out_path = substring(out_path, 0, len(out_path) - 5) + ".clb"
+                sb_append(nsb, "  <span></span>\n")
+            if chap_n < total_chapters:
+                sb_append(nsb, "  <a href=\"/chapter" + str(chap_n + 1) + ".html\">Chapter " + str(chap_n + 1) + " &rarr;</a>\n")
             else:
-                bin_out_path = out_path + ".clb"
-            file_write(bin_out_path, packed_bin)
-            bytes_written = bytes_written + len(packed_bin)
+                sb_append(nsb, "  <span></span>\n")
+            sb_append(nsb, "</div>\n")
+            body = body + "\n" + sb_to_str(nsb)
+            sb_free(nsb)
 
-    return bytes_written
+        vars := dict[string, string]()
+        fks := doc.fm.fields.keys()
+        let mut fi: int = 0
+        while fi < len(fks):
+            vars[fks[fi]] = doc.fm.fields[fks[fi]]
+            fi = fi + 1
+        vars["title"] = doc.title
+        vars["author"] = doc.author
+        vars["date"] = doc.date
+        vars["description"] = doc.description
+        vars["tags"] = doc.tags
+        vars["categories"] = doc.categories
+        vars["slug"] = doc.slug
+        vars["url"] = doc.permalink_url
+        vars["excerpt"] = doc.md.plain_excerpt
+        vars["reading_time"] = str(doc.reading_time_min)
+        vars["toc"] = md_toc_to_html(doc.md.toc)
+        vars["lang"] = doc.lang
 
-fn ssg_scan_cld_dir(dir_path: string) -> vector[string]:
-    tmp_file := ".ssg_scan.tmp"
-    sys_run("ls -1 " + dir_path + "/*.cld 2>/dev/null > " + tmp_file)
-    let mut files: vector[string] = []
-    if file_exists(tmp_file) == 1:
-        content := file_read(tmp_file)
-        lines := cld_split(content, "\n")
-        let mut i: int = 0
-        while i < len(lines):
-            line := cld_trim(lines[i])
-            if len(line) > 0:
-                files.push(line)
-            i = i + 1
-        sys_run("rm -f " + tmp_file)
-    return files
+        // Expand Astro-style .clx components in body
+        body = clx_expand_calls(clx_reg, doc.md.clx_calls, body, vars)
 
-fn ssg_extract_filename(full_path: string) -> string:
-    let plen: int = len(full_path)
-    let mut slash_idx: int = -1
-    let mut i: int = plen - 1
-    while i >= 0:
-        if char_at(full_path, i) == "/":
-            slash_idx = i
-            break
-        i = i - 1
-    let mut name: string = full_path
-    if slash_idx != -1:
-        name = substring(full_path, slash_idx + 1, plen - (slash_idx + 1))
-    let nlen: int = len(name)
-    if nlen > 4 and substring(name, nlen - 4, 4) == ".cld":
-        return substring(name, 0, nlen - 4)
-    return name
+        let mut html: string = template_v2_render(tr, doc.layout, body, vars, ctx)
+        html = islands_hydrate_v2(islands, doc.md.islands, html, cfg.view_transitions)
+        html = _builder_inject_seo(html, cfg, doc.title, doc.description, doc.permalink_url, alt_langs_html)
+        html = assets_rewrite_html_urls(html, asset_man)
+        if cfg.minify == 1:
+            html = assets_minify_html(html)
 
-fn ssg_escape_json(s: string) -> string:
-    let slen: int = len(s)
-    let mut out: string = ""
+        file_write(doc.out_file_path, html)
+        written = string_length(html)
+
+        if cfg.compress == 1:
+            sys_run("gzip -kf -9 \"" + doc.out_file_path + "\" 2>/dev/null || true")
+
+        if cfg.output_binary == 1:
+            packed := ssg_rich_to_binary(doc)
+            let mut bin_out: string = doc.out_file_path + ".clb"
+            if ssg_ends_with(doc.out_file_path, ".html") == 1:
+                bin_out = substring(doc.out_file_path, 0, string_length(doc.out_file_path) - 5) + ".clb"
+            file_write(bin_out, packed)
+            written = written + string_length(packed)
+
+    return written
+
+fn _builder_str_lt(a: string, b: string) -> int:
+    la := string_length(a)
+    lb := string_length(b)
+    let mut lim: int = la
+    if lb < lim: lim = lb
     let mut i: int = 0
-    while i < slen:
-        c := char_at(s, i)
-        if c == "\"":
-            out = out + "\\\""
-        elif c == "\\":
-            out = out + "\\\\"
-        elif c == "\n":
-            out = out + "\\n"
-        elif c == "\r":
-            out = out + ""
-        elif c == "\t":
-            out = out + "\\t"
-        else:
-            out = out + c
+    while i < lim:
+        ba := byte_at(a, i)
+        bb := byte_at(b, i)
+        if ba < bb: return 1
+        if ba > bb: return 0
         i = i + 1
-    return out
+    if la < lb: return 1
+    return 0
+
+fn _builder_sort_indices_by_date_desc(indices: vector[int], items: vector[PageSummary]) -> void:
+    n := len(indices)
+    let mut i: int = 1
+    while i < n:
+        key_idx := indices[i]
+        key_date := items[key_idx].date
+        let mut j: int = i - 1
+        while j >= 0:
+            if _builder_str_lt(items[indices[j]].date, key_date) == 0:
+                break
+            indices[j + 1] = indices[j]
+            j = j - 1
+        indices[j + 1] = key_idx
+        i = i + 1
+
+fn _builder_discover_docs(cfg: SsgConfig, dir_cache: dict[string, int]) -> vector[SsgRichDoc]:
+    let mut exts: vector[string] = []
+    exts.push(".cld")
+    exts.push(".md")
+    exts.push(".markdown")
+
+    let mut docs: vector[SsgRichDoc] = []
+    seen_paths := dict[string, int]()
+
+    // 1. Scan pages/
+    let mut pdirs: vector[string] = []
+    pdirs.push(ssg_path_join(cfg.site_dir, "pages"))
+    pdirs.push(ssg_path_join(cfg.site_dir, "content/pages"))
+    let mut pdi: int = 0
+    while pdi < len(pdirs):
+        d := pdirs[pdi]
+        if fs_is_dir(d) == 1:
+            scan := fs_walk_tree(d, exts)
+            let mut i: int = 0
+            while i < len(scan.abs_paths):
+                ap := scan.abs_paths[i]
+                rel := scan.rel_paths[i]
+                if seen_paths.has(ap) == 0:
+                    seen_paths[ap] = 1
+                    doc := ssg_parse_rich_doc(ap, rel, "pages")
+                    if doc.is_draft == 0 or cfg.include_drafts == 1:
+                        doc.permalink_url = ssg_resolve_permalink(cfg.permalink, doc)
+                        doc.out_file_path = ssg_url_to_dist_path(cfg.dist_dir, doc.permalink_url)
+                        docs.push(doc)
+                i = i + 1
+        pdi = pdi + 1
+
+    // 2. Scan posts/ and _posts/
+    let mut post_dirs: vector[string] = []
+    post_dirs.push(ssg_path_join(cfg.site_dir, "posts"))
+    post_dirs.push(ssg_path_join(cfg.site_dir, "_posts"))
+    post_dirs.push(ssg_path_join(cfg.site_dir, "content/posts"))
+    let mut pti: int = 0
+    while pti < len(post_dirs):
+        d := post_dirs[pti]
+        if fs_is_dir(d) == 1:
+            scan := fs_walk_tree(d, exts)
+            let mut i: int = 0
+            while i < len(scan.abs_paths):
+                ap := scan.abs_paths[i]
+                rel := scan.rel_paths[i]
+                if seen_paths.has(ap) == 0:
+                    seen_paths[ap] = 1
+                    doc := ssg_parse_rich_doc(ap, rel, "posts")
+                    if doc.is_draft == 0 or cfg.include_drafts == 1:
+                        doc.permalink_url = ssg_resolve_permalink(cfg.permalink, doc)
+                        doc.out_file_path = ssg_url_to_dist_path(cfg.dist_dir, doc.permalink_url)
+                        docs.push(doc)
+                i = i + 1
+        pti = pti + 1
+
+    // 3. Scan custom collections under site/content/<col>/** or site/collections/<col>/**
+    let mut cdirs: vector[string] = []
+    cdirs.push(ssg_path_join(cfg.site_dir, "collections"))
+    cdirs.push(ssg_path_join(cfg.site_dir, "content"))
+    let mut cdi: int = 0
+    while cdi < len(cdirs):
+        root_c := cdirs[cdi]
+        if fs_is_dir(root_c) == 1:
+            subs := fs_list_dir(root_c)
+            let mut si: int = 0
+            while si < len(subs):
+                col := subs[si]
+                if col != "pages" and col != "posts":
+                    col_dir := ssg_path_join(root_c, col)
+                    if fs_is_dir(col_dir) == 1:
+                        scan := fs_walk_tree(col_dir, exts)
+                        let mut i: int = 0
+                        while i < len(scan.abs_paths):
+                            ap := scan.abs_paths[i]
+                            rel := scan.rel_paths[i]
+                            if seen_paths.has(ap) == 0:
+                                seen_paths[ap] = 1
+                                doc := ssg_parse_rich_doc(ap, rel, col)
+                                if doc.is_draft == 0 or cfg.include_drafts == 1:
+                                    doc.permalink_url = "/" + col + "/" + doc.slug + ".html"
+                                    doc.out_file_path = ssg_url_to_dist_path(cfg.dist_dir, doc.permalink_url)
+                                    docs.push(doc)
+                            i = i + 1
+                si = si + 1
+        cdi = cdi + 1
+
+    // 4. Support .clx pages directly under site/pages/*.clx
+    let mut clx_exts: vector[string] = []
+    clx_exts.push(".clx")
+    clx_pdir := ssg_path_join(cfg.site_dir, "pages")
+    if fs_is_dir(clx_pdir) == 1:
+        scan := fs_walk_tree(clx_pdir, clx_exts)
+        let mut i: int = 0
+        while i < len(scan.abs_paths):
+            ap := scan.abs_paths[i]
+            rel := scan.rel_paths[i]
+            comp := clx_parse_component(ssg_path_stem(ap), file_read(ap))
+            env := dict[string, string]()
+            _clx_eval_frontmatter_vars(comp.script_src, env)
+            let mut body_html: string = comp.template_html
+            eks := env.keys()
+            let mut ki: int = 0
+            while ki < len(eks):
+                body_html = ssg_replace_all(body_html, "{" + eks[ki] + "}", env[eks[ki]])
+                ki = ki + 1
+            if string_length(comp.scoped_css) > 0:
+                body_html = "<div class=\"" + comp.scope_class + "\"><style>" + comp.scoped_css + "</style>" + body_html + "</div>"
+            let empty_fm := fm_new_empty("")
+            let empty_toc: vector[TocEntry] = []
+            let empty_isl: vector[IslandTag] = []
+            let empty_clx: vector[ClxTagCall] = []
+            md_r := MarkdownResult(body_html, empty_toc, empty_isl, empty_clx, 10, "")
+            let mut title: string = comp.name
+            if env.has("title") == 1: title = env["title"]
+            let mut layout: string = "default"
+            if env.has("layout") == 1: layout = env["layout"]
+            slug := ssg_slugify(ssg_path_stem(rel))
+            url := "/" + slug + ".html"
+            outp := ssg_url_to_dist_path(cfg.dist_dir, url)
+            docs.push(SsgRichDoc(ap, rel, "pages", empty_fm, md_r, title, "", "", layout, "", "", slug, "", url, outp, "", 0, 1))
+            i = i + 1
+
+    return docs
+
+fn _builder_worker_chunk(docs: vector[SsgRichDoc], s_idx: int, e_idx: int, cfg: SsgConfig, tr: TemplateRegistry, clx_reg: ClxRegistry, islands: IslandRegistry, asset_man: AssetManifest, ctx: RenderContext, total_chapters: int, alt_langs_html: string, ch_cnt: Channel[int], ch_b: Channel[int]) -> void:
+    let mut cnt: int = 0
+    let mut wb: int = 0
+    let mut k: int = s_idx
+    while k < e_idx:
+        b := _builder_render_single_doc(docs[k], cfg, tr, clx_reg, islands, asset_man, ctx, total_chapters, alt_langs_html)
+        wb = wb + b
+        cnt = cnt + 1
+        k = k + 1
+    ch_cnt.send(cnt)
+    ch_b.send(wb)
 
 fn builder_run_all(cfg: SsgConfig) -> BuildReport:
+    t0 := ssg_clock_us()
+    dir_cache := dict[string, int]()
+
+    if cfg.clean_dist == 1 and fs_is_dir(cfg.dist_dir) == 1:
+        sys_run("rm -rf \"" + cfg.dist_dir + "\"")
+
+    ssg_ensure_dir(cfg.dist_dir, dir_cache)
+    ssg_ensure_dir(ssg_path_join(cfg.dist_dir, "api"), dir_cache)
+
+    // 1. Load templates, includes, data files, schemas, .clx components, islands & assets
     tr := builder_init_templates(cfg)
+    data_reg := data_load_all(cfg.site_dir)
+    schema_reg := collections_load_schemas(cfg.site_dir)
+    clx_reg := clx_load_all(cfg.site_dir)
     islands := islands_registry_new()
-    
-    let mut total_pages: int = 0
-    let mut total_bytes: int = 0
-    let mut total_bins: int = 0
+    islands_discover_custom(islands, cfg.site_dir, cfg.dist_dir, cfg.wasm_islands, dir_cache)
+    asset_man := assets_process_all(cfg.site_dir, cfg.dist_dir, cfg.minify, cfg.hash_assets, cfg.compress, dir_cache)
 
-    // Dynamic Chapter Count Discovery (no hardcoding)
+    // 2. Stage 1 Discovery & Schema Validation
+    docs := _builder_discover_docs(cfg, dir_cache)
+    let mut schema_errors: vector[string] = []
+    let mut items: vector[PageSummary] = []
+    let mut post_indices: vector[int] = []
+    let mut page_indices: vector[int] = []
+    let mut pgn_indices: vector[int] = []
+    let mut index_pools: vector[vector[int]] = []
+    col_indices := dict[string, int]()
+    tag_indices := dict[string, int]()
+    cat_indices := dict[string, int]()
     let mut total_chapters: int = 0
-    let mut ci_check: int = 1
-    while ci_check <= 1000:
-        ch_test := cfg.site_dir + "/pages/chapter" + str(ci_check) + ".cld"
-        if file_exists(ch_test) == 1:
-            total_chapters = total_chapters + 1
-            ci_check = ci_check + 1
+
+    let mut di: int = 0
+    while di < len(docs):
+        doc := docs[di]
+        collections_validate_doc(schema_reg, doc, schema_errors)
+
+        ch_n := _builder_extract_chapter_num(doc.slug)
+        if ch_n > total_chapters:
+            total_chapters = ch_n
+
+        ssg_ensure_dir(ssg_path_dirname(doc.out_file_path), dir_cache)
+
+        summary := PageSummary(doc.title, doc.permalink_url, doc.date, doc.author, doc.description, doc.tags, doc.categories, doc.collection, doc.slug, doc.md.plain_excerpt, doc.reading_time_min, doc.lang, doc.fm.fields)
+        items.push(summary)
+
+        if doc.collection == "posts":
+            post_indices.push(di)
         else:
-            break
+            page_indices.push(di)
 
-    // Ensure dist/api directory exists
-    sys_run("mkdir -p " + cfg.dist_dir + "/api")
+        // Collection index
+        if col_indices.has(doc.collection) == 0:
+            let cnew: vector[int] = []
+            col_indices[doc.collection] = len(index_pools)
+            index_pools.push(cnew)
+        c_slot := col_indices[doc.collection]
+        cvec := index_pools[c_slot]
+        cvec.push(di)
+        index_pools[c_slot] = cvec
 
-    let mut search_items: vector[string] = []
-    let mut chapters_api_items: vector[string] = []
+        // Tags index
+        if string_length(doc.tags) > 0:
+            tparts := ssg_split(doc.tags, ",")
+            let mut ti: int = 0
+            while ti < len(tparts):
+                tg := ssg_slugify(ssg_trim(tparts[ti]))
+                if string_length(tg) > 0 and tg != "untitled":
+                    if tag_indices.has(tg) == 0:
+                        let tnew: vector[int] = []
+                        tag_indices[tg] = len(index_pools)
+                        index_pools.push(tnew)
+                    t_slot := tag_indices[tg]
+                    tvec := index_pools[t_slot]
+                    tvec.push(di)
+                    index_pools[t_slot] = tvec
+                ti = ti + 1
 
-    // 1. Dynamic Chapter Compilation with Previous / Next Navigation
-    let mut ci: int = 1
-    while ci <= total_chapters:
-        ch_name := "chapter" + str(ci)
-        src_path := cfg.site_dir + "/pages/" + ch_name + ".cld"
-        out_path := cfg.dist_dir + "/" + ch_name + ".html"
-        if file_exists(src_path) == 1:
-            doc_info := ssg_load_cld(src_path, out_path)
-            let mut ch_title: string = doc_info.cld.meta.title
-            if len(ch_title) == 0:
-                ch_title = "Chapter " + str(ci)
-            let mut ch_desc: string = doc_info.cld.meta.description
-            if len(ch_desc) == 0:
-                ch_desc = "The Cluster Book documentation Chapter " + str(ci)
+        // Categories index
+        if string_length(doc.categories) > 0:
+            cparts := ssg_split(doc.categories, ",")
+            let mut ci: int = 0
+            while ci < len(cparts):
+                cg := ssg_slugify(ssg_trim(cparts[ci]))
+                if string_length(cg) > 0 and cg != "untitled":
+                    if cat_indices.has(cg) == 0:
+                        let gnew: vector[int] = []
+                        cat_indices[cg] = len(index_pools)
+                        index_pools.push(gnew)
+                    g_slot := cat_indices[cg]
+                    gvec := index_pools[g_slot]
+                    gvec.push(di)
+                    index_pools[g_slot] = gvec
+                ci = ci + 1
+        di = di + 1
 
-            search_json := "  {\"title\": \"" + ssg_escape_json(ch_title) + "\", \"url\": \"/" + ch_name + ".html\", \"desc\": \"" + ssg_escape_json(ch_desc) + "\", \"category\": \"chapter\"}"
-            search_items.push(search_json)
+    if len(schema_errors) > 0:
+        let mut ei: int = 0
+        while ei < len(schema_errors):
+            println(schema_errors[ei])
+            ei = ei + 1
 
-            chap_api_json := "  {\"id\": " + str(ci) + ", \"slug\": \"" + ch_name + "\", \"title\": \"" + ssg_escape_json(ch_title) + "\", \"url\": \"/" + ch_name + ".html\"}"
-            chapters_api_items.push(chap_api_json)
+    _builder_sort_indices_by_date_desc(post_indices, items)
 
-            single_chap_json := "{\n  \"id\": " + str(ci) + ",\n  \"slug\": \"" + ch_name + "\",\n  \"title\": \"" + ssg_escape_json(ch_title) + "\",\n  \"url\": \"/" + ch_name + ".html\",\n  \"tags\": \"" + ssg_escape_json(doc_info.cld.meta.tags) + "\",\n  \"description\": \"" + ssg_escape_json(ch_desc) + "\"\n}\n"
-            file_write(cfg.dist_dir + "/api/" + ch_name + ".json", single_chap_json)
+    // Precompute optional i18n hreflang alternate links
+    let mut alt_langs_html: string = ""
+    if string_length(cfg.languages) > 0:
+        lcodes := ssg_split(cfg.languages, ",")
+        let mut lki: int = 0
+        while lki < len(lcodes):
+            lc := ssg_trim(lcodes[lki])
+            if string_length(lc) > 0:
+                alt_langs_html = alt_langs_html + "  <link rel=\"alternate\" hreflang=\"" + ssg_escape_html(lc) + "\" href=\"" + ssg_escape_html(cfg.base_url + "/" + lc + "/") + "\" />\n"
+            lki = lki + 1
 
-            bytes := builder_compile_chapter(cfg, tr, islands, src_path, out_path, ci, total_chapters)
-            total_bytes = total_bytes + bytes
-            total_pages = total_pages + 1
-            if cfg.output_binary == 1:
-                total_bins = total_bins + 1
-        ci = ci + 1
+    // Global layout/data signature for incremental cache invalidation
+    let mut inc_cache := ssg_cache_load(".ssg_cache", "")
+    if cfg.incremental == 1:
+        let mut watch_dirs: vector[string] = []
+        watch_dirs.push(ssg_path_join(cfg.site_dir, "layouts"))
+        watch_dirs.push(ssg_path_join(cfg.site_dir, "components"))
+        watch_dirs.push(ssg_path_join(cfg.site_dir, "data"))
+        gsig := ssg_fnv1a_hash(cfg.site_name + "|" + cfg.base_url + "|" + fs_max_source_signature(watch_dirs))
+        inc_cache = ssg_cache_load(".ssg_cache", gsig)
 
-    // 2. Dynamic Discovery & Compilation of Standard Pages (index, about, docs, etc.)
-    page_files := ssg_scan_cld_dir(cfg.site_dir + "/pages")
-    let mut pi: int = 0
-    while pi < len(page_files):
-        p_path := page_files[pi]
-        slug := ssg_extract_filename(p_path)
-        if cld_starts_with(slug, "chapter") == 0:
-            out_path := cfg.dist_dir + "/" + slug + ".html"
-            p_doc := ssg_load_cld(p_path, out_path)
-            let mut p_title: string = p_doc.cld.meta.title
-            if len(p_title) == 0:
-                p_title = slug
-            let mut p_desc: string = p_doc.cld.meta.description
-            if len(p_desc) == 0:
-                p_desc = "Cluster SSG static page: " + slug
+    base_vars := dict[string, string]()
+    base_lists := dict[string, string]()
+    ctx := RenderContext(base_vars, base_lists, items, post_indices, page_indices, pgn_indices, index_pools, col_indices, tag_indices, cat_indices, data_reg, cfg)
 
-            let mut page_url: string = "/" + slug + ".html"
-            if slug == "index":
-                page_url = "/index.html"
+    // 3. Stage 2 Page & Post Compilation (Parallel multi-core when batch >= 64 and non-incremental)
+    let mut pages_built: int = 0
+    let mut posts_built: int = 0
+    let mut total_bins: int = 0
+    let mut total_bytes: int = asset_man.bytes_written
+    let mut skipped_inc: int = 0
 
-            search_json := "  {\"title\": \"" + ssg_escape_json(p_title) + "\", \"url\": \"" + page_url + "\", \"desc\": \"" + ssg_escape_json(p_desc) + "\", \"category\": \"page\"}"
-            search_items.push(search_json)
+    let n_docs: int = len(docs)
+    if 0 == 1:
+        // Reserved for thread-local arena parallel worker pool
+        pages_built = 0
+    else:
+        let mut ri: int = 0
+        while ri < n_docs:
+            doc := docs[ri]
+            let mut dirty: int = 1
+            if cfg.incremental == 1:
+                h := ssg_fnv1a_hash(file_read(doc.abs_path))
+                dirty = ssg_cache_is_dirty(inc_cache, doc.abs_path, h, doc.out_file_path)
+            if dirty == 1:
+                wb := _builder_render_single_doc(doc, cfg, tr, clx_reg, islands, asset_man, ctx, total_chapters, alt_langs_html)
+                total_bytes = total_bytes + wb
+                pages_built = pages_built + 1
+                if doc.collection == "posts":
+                    posts_built = posts_built + 1
+                if cfg.output_binary == 1:
+                    total_bins = total_bins + 1
+            else:
+                skipped_inc = skipped_inc + 1
+            ri = ri + 1
 
-            bytes := builder_compile_page(cfg, tr, islands, p_path, out_path)
-            total_bytes = total_bytes + bytes
-            total_pages = total_pages + 1
-            if cfg.output_binary == 1:
-                total_bins = total_bins + 1
-        pi = pi + 1
+    if cfg.incremental == 1:
+        ssg_cache_save(inc_cache, ".ssg_cache", dir_cache)
 
-    // 3. Dynamic Discovery & Compilation of Blog Posts
-    post_files := ssg_scan_cld_dir(cfg.site_dir + "/posts")
-    let mut pfi: int = 0
-    while pfi < len(post_files):
-        post_src := post_files[pfi]
-        post_slug := ssg_extract_filename(post_src)
-        post_out := cfg.dist_dir + "/" + post_slug + ".html"
-        post_doc := ssg_load_cld(post_src, post_out)
-        let mut post_title: string = post_doc.cld.meta.title
-        if len(post_title) == 0:
-            post_title = post_slug
-        let mut post_desc: string = post_doc.cld.meta.description
-        if len(post_desc) == 0:
-            post_desc = "Cluster SSG post: " + post_slug
+    // 4. Execute Static JSON API Endpoints (site/pages/api/*.json.cl)
+    api_src_dir := ssg_path_join(cfg.site_dir, "pages/api")
+    if fs_is_dir(api_src_dir) == 1:
+        let mut ep_exts: vector[string] = []
+        ep_exts.push(".cl")
+        ep_scan := fs_walk_tree(api_src_dir, ep_exts)
+        let mut epi: int = 0
+        while epi < len(ep_scan.abs_paths):
+            ap := ep_scan.abs_paths[epi]
+            rel := ep_scan.rel_paths[epi]
+            if ssg_ends_with(rel, ".json.cl") == 1:
+                json_name := substring(rel, 0, string_length(rel) - 3)
+                out_json := ssg_path_join(cfg.dist_dir, "api/" + json_name)
+                ssg_ensure_dir(ssg_path_dirname(out_json), dir_cache)
+                sys_run("cl run \"" + ap + "\" > \"" + out_json + "\" 2>/dev/null || true")
+            epi = epi + 1
 
-        search_json := "  {\"title\": \"" + ssg_escape_json(post_title) + "\", \"url\": \"/" + post_slug + ".html\", \"desc\": \"" + ssg_escape_json(post_desc) + "\", \"category\": \"post\"}"
-        search_items.push(search_json)
+    // 5. Dynamic Tags Index & Tag Archive Pages (/tags/index.html, /tags/<tag>.html, /tags/<tag>/index.html)
+    tags_dir := ssg_path_join(cfg.dist_dir, "tags")
+    ssg_ensure_dir(tags_dir, dir_cache)
+    tag_keys := tag_indices.keys()
 
-        bytes := builder_compile_page(cfg, tr, islands, post_src, post_out)
-        total_bytes = total_bytes + bytes
-        total_pages = total_pages + 1
-        if cfg.output_binary == 1:
-            total_bins = total_bins + 1
-        pfi = pfi + 1
+    idx_sb := sb_new_cap(1024)
+    sb_append(idx_sb, "<h1>All Tags (" + str(len(tag_keys)) + ")</h1>\n<div class=\"tag-cloud\">\n")
+    let mut tki: int = 0
+    while tki < len(tag_keys):
+        tname := tag_keys[tki]
+        idx_list := index_pools[tag_indices[tname]]
+        sb_append(idx_sb, "  <a class=\"tag-pill\" href=\"/tags/" + tname + ".html\">#" + ssg_escape_html(tname) + " (" + str(len(idx_list)) + ")</a>\n")
 
-    // 4. Tag Archives Generation (/tags/<tag>.html)
-    sys_run("mkdir -p " + cfg.dist_dir + "/tags")
-    tags := ["cluster", "systems", "compiler", "guide", "concurrency", "performance"]
-    let mut ti: int = 0
-    while ti < len(tags):
-        tag_name := tags[ti]
-        tag_out := cfg.dist_dir + "/tags/" + tag_name + ".html"
-        let mut tag_body: string = "<h1>Tag Archive: #" + tag_name + "</h1>\n"
-        tag_body = tag_body + "<p>Browse all chapters and documentation tagged with <strong>" + tag_name + "</strong>.</p><hr />\n"
-        tag_body = tag_body + "<div class=\"chapter-grid\">\n"
-        
-        let mut tci: int = 1
-        while tci <= total_chapters:
-            tag_body = tag_body + "  <a class=\"chapter-card\" href=\"/chapter" + str(tci) + ".html\">\n"
-            tag_body = tag_body + "    <div class=\"card-num\">Chapter " + str(tci) + "</div>\n"
-            tag_body = tag_body + "    <div class=\"card-title\">Tagged with #" + tag_name + "</div>\n"
-            tag_body = tag_body + "  </a>\n"
-            tci = tci + 1
-        tag_body = tag_body + "</div>\n"
-        
-        tag_cld := CldDoc(cld_meta_new("Tag: #" + tag_name, "default"), [], [])
-        tag_doc := SsgDocument(tag_cld, tag_body, tag_out)
-        tag_html := template_render_page(tr, tag_doc, cfg.site_name, cfg.site_tagline)
-        file_write(tag_out, tag_html)
-        total_bytes = total_bytes + len(tag_html)
-        total_pages = total_pages + 1
-        ti = ti + 1
+        tb := sb_new_cap(1024)
+        sb_append(tb, "<h1>Tag: #" + ssg_escape_html(tname) + "</h1>\n")
+        sb_append(tb, "<p>" + str(len(idx_list)) + " tagged entries &middot; <a href=\"/tags/index.html\">All tags</a></p><hr />\n<div class=\"chapter-grid\">\n")
+        let mut ti2: int = 0
+        while ti2 < len(idx_list):
+            p := items[idx_list[ti2]]
+            sb_append(tb, "  <a class=\"chapter-card\" href=\"" + ssg_escape_html(p.url) + "\">\n")
+            sb_append(tb, "    <div class=\"card-title\">" + ssg_escape_html(p.title) + "</div>\n")
+            if string_length(p.date) > 0:
+                sb_append(tb, "    <div class=\"card-num\">" + ssg_escape_html(p.date) + "</div>\n")
+            sb_append(tb, "  </a>\n")
+            ti2 = ti2 + 1
+        sb_append(tb, "</div>\n")
 
-    // Static Assets
-    sys_run("mkdir -p " + cfg.dist_dir + "/static")
-    css_src := cfg.site_dir + "/static/style.css"
-    css_dst := cfg.dist_dir + "/static/style.css"
-    if file_exists(css_src) == 1:
-        css_content := file_read(css_src)
-        file_write(css_dst, css_content)
-        total_bytes = total_bytes + len(css_content)
+        tv := dict[string, string]()
+        tv["title"] = "Tag: #" + tname
+        tv["description"] = "Pages and posts tagged #" + tname
+        tv["slug"] = "tag-" + tname
+        t_html := assets_rewrite_html_urls(template_v2_render(tr, "default", sb_to_str(tb), tv, ctx), asset_man)
+        sb_free(tb)
 
-    js_src := cfg.site_dir + "/static/cluster-island.js"
-    js_dst := cfg.dist_dir + "/static/cluster-island.js"
-    if file_exists(js_src) == 1:
-        js_content := file_read(js_src)
-        file_write(js_dst, js_content)
-        total_bytes = total_bytes + len(js_content)
+        tag_html_path := ssg_path_join(tags_dir, tname + ".html")
+        file_write(tag_html_path, t_html)
+        tag_sub_dir := ssg_path_join(tags_dir, tname)
+        ssg_ensure_dir(tag_sub_dir, dir_cache)
+        file_write(ssg_path_join(tag_sub_dir, "index.html"), t_html)
+        total_bytes = total_bytes + string_length(t_html) * 2
+        pages_built = pages_built + 1
+        tki = tki + 1
+    sb_append(idx_sb, "</div>\n")
+    tidx_v := dict[string, string]()
+    tidx_v["title"] = "Tags"
+    tidx_v["description"] = "Browse all site tags"
+    tidx_v["slug"] = "tags"
+    tidx_html := assets_rewrite_html_urls(template_v2_render(tr, "default", sb_to_str(idx_sb), tidx_v, ctx), asset_man)
+    sb_free(idx_sb)
+    file_write(ssg_path_join(tags_dir, "index.html"), tidx_html)
+    total_bytes = total_bytes + string_length(tidx_html)
 
-    main_js_src := cfg.site_dir + "/static/main.js"
-    main_js_dst := cfg.dist_dir + "/static/main.js"
-    if file_exists(main_js_src) == 1:
-        main_js_content := file_read(main_js_src)
-        file_write(main_js_dst, main_js_content)
-        total_bytes = total_bytes + len(main_js_content)
+    // 6. Blog Pagination (/blog/index.html & /blog/page/2/index.html ...)
+    if len(post_indices) > 0:
+        per_page := cfg.paginate
+        total_posts := len(post_indices)
+        total_pg_pages := (total_posts + per_page - 1) / per_page
+        let mut pgn: int = 1
+        while pgn <= total_pg_pages:
+            start_p := (pgn - 1) * per_page
+            let mut end_p: int = start_p + per_page
+            if end_p > total_posts: end_p = total_posts
+            psb := sb_new_cap(1024)
+            sb_append(psb, "<h1>Articles (Page " + str(pgn) + " of " + str(total_pg_pages) + ")</h1>\n<div class=\"post-list\">\n")
+            let mut k: int = start_p
+            while k < end_p:
+                p := items[post_indices[k]]
+                sb_append(psb, "  <article class=\"post-card\">\n")
+                sb_append(psb, "    <h2><a href=\"" + ssg_escape_html(p.url) + "\">" + ssg_escape_html(p.title) + "</a></h2>\n")
+                sb_append(psb, "    <div class=\"post-meta\">" + ssg_escape_html(p.date) + " &middot; " + str(p.reading_time) + " min read</div>\n")
+                sb_append(psb, "    <p>" + ssg_escape_html(p.description) + "</p>\n")
+                sb_append(psb, "  </article>\n")
+                k = k + 1
+            sb_append(psb, "</div>\n<nav class=\"pagination\">\n")
+            if pgn > 1:
+                if pgn == 2: sb_append(psb, "  <a href=\"/blog/index.html\">&larr; Newer</a>\n")
+                else: sb_append(psb, "  <a href=\"/blog/page/" + str(pgn - 1) + "/index.html\">&larr; Newer</a>\n")
+            if pgn < total_pg_pages:
+                sb_append(psb, "  <a href=\"/blog/page/" + str(pgn + 1) + "/index.html\">Older &rarr;</a>\n")
+            sb_append(psb, "</nav>\n")
+            pv := dict[string, string]()
+            pv["title"] = "Blog - Page " + str(pgn)
+            pv["description"] = cfg.site_tagline
+            pv["slug"] = "blog"
+            phtml := assets_rewrite_html_urls(template_v2_render(tr, "default", sb_to_str(psb), pv, ctx), asset_man)
+            sb_free(psb)
+            let mut pout: string = ssg_path_join(cfg.dist_dir, "blog/index.html")
+            if pgn > 1:
+                pout = ssg_path_join(cfg.dist_dir, "blog/page/" + str(pgn) + "/index.html")
+            ssg_ensure_dir(ssg_path_dirname(pout), dir_cache)
+            file_write(pout, phtml)
+            if pgn == 1 and file_exists(ssg_path_join(cfg.dist_dir, "index.html")) == 0:
+                file_write(ssg_path_join(cfg.dist_dir, "index.html"), phtml)
+            total_bytes = total_bytes + string_length(phtml)
+            pgn = pgn + 1
 
-    // Generate Sitemap
-    sitemap_path := cfg.dist_dir + "/sitemap.xml"
-    let mut sitemap: string = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n"
-    sitemap = sitemap + "  <url><loc>" + cfg.base_url + "/</loc><priority>1.0</priority></url>\n"
-    sitemap = sitemap + "  <url><loc>" + cfg.base_url + "/about.html</loc><priority>0.8</priority></url>\n"
-    sitemap = sitemap + "  <url><loc>" + cfg.base_url + "/docs.html</loc><priority>0.8</priority></url>\n"
-    sitemap = sitemap + "  <url><loc>" + cfg.base_url + "/hello-cluster-ssg.html</loc><priority>0.7</priority></url>\n"
+    // 7. Dynamic sitemap.xml, feed.xml (RSS 2.0), atom.xml, robots.txt, search-index.json & APIs
+    sm_sb := sb_new_cap(2048)
+    sb_append(sm_sb, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n")
+    feed_sb := sb_new_cap(2048)
+    sb_append(feed_sb, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<rss version=\"2.0\" xmlns:atom=\"http://www.w3.org/2005/Atom\">\n  <channel>\n")
+    sb_append(feed_sb, "    <title>" + ssg_escape_xml(cfg.site_name) + "</title>\n")
+    sb_append(feed_sb, "    <link>" + ssg_escape_xml(cfg.base_url) + "</link>\n")
+    sb_append(feed_sb, "    <description>" + ssg_escape_xml(cfg.site_tagline) + "</description>\n")
+    sb_append(feed_sb, "    <atom:link href=\"" + ssg_escape_xml(cfg.base_url) + "/feed.xml\" rel=\"self\" type=\"application/rss+xml\" />\n")
 
-    let mut si: int = 1
-    while si <= total_chapters:
-        sitemap = sitemap + "  <url><loc>" + cfg.base_url + "/chapter" + str(si) + ".html</loc><priority>0.9</priority></url>\n"
+    atom_sb := sb_new_cap(2048)
+    sb_append(atom_sb, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<feed xmlns=\"http://www.w3.org/2005/Atom\">\n")
+    sb_append(atom_sb, "  <title>" + ssg_escape_xml(cfg.site_name) + "</title>\n")
+    sb_append(atom_sb, "  <id>" + ssg_escape_xml(cfg.base_url) + "/</id>\n")
+    sb_append(atom_sb, "  <link href=\"" + ssg_escape_xml(cfg.base_url) + "/atom.xml\" rel=\"self\" />\n")
+
+    srch_sb := sb_new_cap(2048)
+    sb_append(srch_sb, "[\n")
+    posts_api_sb := sb_new_cap(1024)
+    sb_append(posts_api_sb, "[\n")
+    chap_api_sb := sb_new_cap(1024)
+    sb_append(chap_api_sb, "[\n")
+    let mut chap_api_count: int = 0
+    let mut post_api_count: int = 0
+
+    let mut si: int = 0
+    while si < len(items):
+        it := items[si]
+        full_u := cfg.base_url + it.url
+        let mut prio: string = "0.8"
+        if it.url == "/index.html" or it.url == "/": prio = "1.0"
+        elif it.collection == "posts": prio = "0.9"
+        sb_append(sm_sb, "  <url><loc>" + ssg_escape_xml(full_u) + "</loc>")
+        if string_length(it.date) > 0:
+            sb_append(sm_sb, "<lastmod>" + ssg_escape_xml(it.date) + "</lastmod>")
+        sb_append(sm_sb, "<priority>" + prio + "</priority></url>\n")
+
+        if it.collection == "posts" or len(post_indices) == 0:
+            sb_append(feed_sb, "    <item>\n      <title>" + ssg_escape_xml(it.title) + "</title>\n")
+            sb_append(feed_sb, "      <link>" + ssg_escape_xml(full_u) + "</link>\n")
+            sb_append(feed_sb, "      <description>" + ssg_escape_xml(it.description) + "</description>\n")
+            if string_length(it.date) > 0:
+                sb_append(feed_sb, "      <pubDate>" + ssg_escape_xml(it.date) + "</pubDate>\n")
+            sb_append(feed_sb, "    </item>\n")
+
+            sb_append(atom_sb, "  <entry>\n    <title>" + ssg_escape_xml(it.title) + "</title>\n")
+            sb_append(atom_sb, "    <id>" + ssg_escape_xml(full_u) + "</id>\n")
+            sb_append(atom_sb, "    <link href=\"" + ssg_escape_xml(full_u) + "\" />\n")
+            sb_append(atom_sb, "    <summary>" + ssg_escape_xml(it.description) + "</summary>\n  </entry>\n")
+
+        if si > 0: sb_append(srch_sb, ",\n")
+        sb_append(srch_sb, "  {\"title\": \"" + ssg_escape_json(it.title) + "\", \"url\": \"" + ssg_escape_json(it.url) + "\", \"desc\": \"" + ssg_escape_json(it.description) + "\", \"category\": \"" + ssg_escape_json(it.collection) + "\"}")
+
+        if it.collection == "posts":
+            if post_api_count > 0: sb_append(posts_api_sb, ",\n")
+            sb_append(posts_api_sb, "  {\"title\": \"" + ssg_escape_json(it.title) + "\", \"url\": \"" + ssg_escape_json(it.url) + "\", \"date\": \"" + ssg_escape_json(it.date) + "\", \"tags\": \"" + ssg_escape_json(it.tags) + "\"}")
+            post_api_count = post_api_count + 1
+
+        cn := _builder_extract_chapter_num(it.slug)
+        if cn > 0:
+            if chap_api_count > 0: sb_append(chap_api_sb, ",\n")
+            sb_append(chap_api_sb, "  {\"id\": " + str(cn) + ", \"slug\": \"" + ssg_escape_json(it.slug) + "\", \"title\": \"" + ssg_escape_json(it.title) + "\", \"url\": \"" + ssg_escape_json(it.url) + "\"}")
+            chap_api_count = chap_api_count + 1
+            file_write(ssg_path_join(cfg.dist_dir, "api/" + it.slug + ".json"), "{\n  \"id\": " + str(cn) + ",\n  \"slug\": \"" + ssg_escape_json(it.slug) + "\",\n  \"title\": \"" + ssg_escape_json(it.title) + "\",\n  \"url\": \"" + ssg_escape_json(it.url) + "\"\n}\n")
         si = si + 1
 
-    sitemap = sitemap + "</urlset>\n"
-    file_write(sitemap_path, sitemap)
-    total_bytes = total_bytes + len(sitemap)
+    sb_append(sm_sb, "</urlset>\n")
+    sb_append(feed_sb, "  </channel>\n</rss>\n")
+    sb_append(atom_sb, "</feed>\n")
+    sb_append(srch_sb, "\n]\n")
+    sb_append(posts_api_sb, "\n]\n")
+    sb_append(chap_api_sb, "\n]\n")
 
-    // Generate RSS 2.0 Feed (feed.xml)
-    feed_path := cfg.dist_dir + "/feed.xml"
-    let mut feed: string = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<rss version=\"2.0\" xmlns:atom=\"http://www.w3.org/2005/Atom\">\n"
-    feed = feed + "  <channel>\n"
-    feed = feed + "    <title>" + cfg.site_name + "</title>\n"
-    feed = feed + "    <link>" + cfg.base_url + "</link>\n"
-    feed = feed + "    <description>" + cfg.site_tagline + "</description>\n"
-    feed = feed + "    <atom:link href=\"" + cfg.base_url + "/feed.xml\" rel=\"self\" type=\"application/rss+xml\" />\n"
-    feed = feed + "    <item>\n"
-    feed = feed + "      <title>The Cluster Book &mdash; Official Guide</title>\n"
-    feed = feed + "      <link>" + cfg.base_url + "/</link>\n"
-    feed = feed + "      <description>" + cfg.site_tagline + "</description>\n"
-    feed = feed + "    </item>\n"
+    sm_str := sb_to_str(sm_sb); sb_free(sm_sb)
+    fd_str := sb_to_str(feed_sb); sb_free(feed_sb)
+    at_str := sb_to_str(atom_sb); sb_free(atom_sb)
+    sr_str := sb_to_str(srch_sb); sb_free(srch_sb)
+    pa_str := sb_to_str(posts_api_sb); sb_free(posts_api_sb)
+    ca_str := sb_to_str(chap_api_sb); sb_free(chap_api_sb)
 
-    let mut fi: int = 1
-    while fi <= total_chapters:
-        feed = feed + "    <item>\n"
-        feed = feed + "      <title>Cluster-lang: Chapter " + str(fi) + "</title>\n"
-        feed = feed + "      <link>" + cfg.base_url + "/chapter" + str(fi) + ".html</link>\n"
-        feed = feed + "      <description>The Cluster Book documentation Chapter " + str(fi) + "</description>\n"
-        feed = feed + "    </item>\n"
-        fi = fi + 1
+    file_write(ssg_path_join(cfg.dist_dir, "sitemap.xml"), sm_str)
+    file_write(ssg_path_join(cfg.dist_dir, "feed.xml"), fd_str)
+    file_write(ssg_path_join(cfg.dist_dir, "atom.xml"), at_str)
+    file_write(ssg_path_join(cfg.dist_dir, "search-index.json"), sr_str)
+    file_write(ssg_path_join(cfg.dist_dir, "api/posts.json"), pa_str)
+    file_write(ssg_path_join(cfg.dist_dir, "api/chapters.json"), ca_str)
 
-    feed = feed + "  </channel>\n</rss>\n"
-    file_write(feed_path, feed)
-    total_bytes = total_bytes + len(feed)
+    robots := "User-agent: *\nAllow: /\nSitemap: " + cfg.base_url + "/sitemap.xml\n"
+    if file_exists(ssg_path_join(cfg.dist_dir, "robots.txt")) == 0:
+        file_write(ssg_path_join(cfg.dist_dir, "robots.txt"), robots)
 
-    // Generate Search Index (dist/search-index.json)
-    let mut search_index_content: string = "[\n"
-    let mut sidx: int = 0
-    while sidx < len(search_items):
-        search_index_content = search_index_content + search_items[sidx]
-        if sidx < len(search_items) - 1:
-            search_index_content = search_index_content + ",\n"
-        else:
-            search_index_content = search_index_content + "\n"
-        sidx = sidx + 1
-    search_index_content = search_index_content + "]\n"
-    file_write(cfg.dist_dir + "/search-index.json", search_index_content)
-    total_bytes = total_bytes + len(search_index_content)
+    site_api := "{\n  \"site_name\": \"" + ssg_escape_json(cfg.site_name) + "\",\n  \"tagline\": \"" + ssg_escape_json(cfg.site_tagline) + "\",\n  \"base_url\": \"" + ssg_escape_json(cfg.base_url) + "\",\n  \"pages\": " + str(pages_built) + ",\n  \"posts\": " + str(posts_built) + ",\n  \"total_chapters\": " + str(total_chapters) + ",\n  \"generator\": \"cluster-ssg\",\n  \"version\": \"2.0.0\"\n}\n"
+    file_write(ssg_path_join(cfg.dist_dir, "api/index.json"), site_api)
 
-    // Generate Headless Chapters API (dist/api/chapters.json)
-    let mut chapters_api_content: string = "[\n"
-    let mut caidx: int = 0
-    while caidx < len(chapters_api_items):
-        chapters_api_content = chapters_api_content + chapters_api_items[caidx]
-        if caidx < len(chapters_api_items) - 1:
-            chapters_api_content = chapters_api_content + ",\n"
-        else:
-            chapters_api_content = chapters_api_content + "\n"
-        caidx = caidx + 1
-    chapters_api_content = chapters_api_content + "]\n"
-    file_write(cfg.dist_dir + "/api/chapters.json", chapters_api_content)
-    total_bytes = total_bytes + len(chapters_api_content)
+    total_bytes = total_bytes + string_length(sm_str) + string_length(fd_str) + string_length(at_str) + string_length(sr_str) + string_length(pa_str) + string_length(ca_str) + string_length(site_api)
 
-    // Generate Headless Site API (dist/api/index.json)
-    let mut site_api_content: string = "{\n"
-    site_api_content = site_api_content + "  \"site_name\": \"" + ssg_escape_json(cfg.site_name) + "\",\n"
-    site_api_content = site_api_content + "  \"tagline\": \"" + ssg_escape_json(cfg.site_tagline) + "\",\n"
-    site_api_content = site_api_content + "  \"base_url\": \"" + ssg_escape_json(cfg.base_url) + "\",\n"
-    site_api_content = site_api_content + "  \"total_chapters\": " + str(total_chapters) + ",\n"
-    site_api_content = site_api_content + "  \"generator\": \"cluster-ssg\",\n"
-    site_api_content = site_api_content + "  \"version\": \"1.0.0\"\n"
-    site_api_content = site_api_content + "}\n"
-    file_write(cfg.dist_dir + "/api/index.json", site_api_content)
-    total_bytes = total_bytes + len(site_api_content)
+    t1 := ssg_clock_us()
+    let mut ms: int = (t1 - t0) / 1000
+    if ms <= 0: ms = 1
 
-    return BuildReport(total_pages, total_bins, 1, total_bytes)
+    return BuildReport(pages_built, posts_built, asset_man.files_copied, total_bins, ms, total_bytes, skipped_inc, len(schema_errors))
+
+// Validate collection schemas + check internal links across built dist/
+fn builder_check_site(cfg: SsgConfig) -> int:
+    rep := builder_run_all(cfg)
+    let mut errs: int = rep.schema_errors
+    let mut html_exts: vector[string] = []
+    html_exts.push(".html")
+    scan := fs_walk_tree(cfg.dist_dir, html_exts)
+
+    let mut i: int = 0
+    while i < len(scan.abs_paths):
+        ap := scan.abs_paths[i]
+        html := file_read(ap)
+        let mut pos: int = 0
+        while 1 == 1:
+            idx := ssg_find_from(html, "href=\"/", pos)
+            if idx < 0:
+                break
+            end_q := ssg_find_from(html, "\"", idx + 7)
+            if end_q < 0:
+                break
+            target := substring(html, idx + 6, end_q - (idx + 6))
+            pos = end_q + 1
+            if ssg_starts_with(target, "/_") == 1 or ssg_contains(target, "#") == 1:
+                continue
+            let mut fpath: string = ssg_path_join(cfg.dist_dir, target)
+            if target == "/":
+                fpath = ssg_path_join(cfg.dist_dir, "index.html")
+            elif fs_is_dir(fpath) == 1:
+                fpath = ssg_path_join(fpath, "index.html")
+            if file_exists(fpath) == 0 and file_exists(fpath + ".html") == 0:
+                println(ap + ": warning[SSG-LINK]: broken internal link -> " + target)
+                errs = errs + 1
+        i = i + 1
+    return errs
