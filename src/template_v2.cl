@@ -15,6 +15,8 @@ model TemplateRegistry:
     layout_names: vector[string]
     layout_contents: vector[string]
     layout_map: dict[string, string]
+    layout_bodies: dict[string, string]
+    layout_parents: dict[string, string]
     include_names: vector[string]
     include_contents: vector[string]
     include_map: dict[string, string]
@@ -49,18 +51,18 @@ model RenderContext:
     config: SsgConfig
 
 fn template_new() -> TemplateRegistry:
-    let ln: vector[string] = []
-    let lc: vector[string] = []
-    let inames: vector[string] = []
-    let iconts: vector[string] = []
-    lm := dict[string, string]()
-    im := dict[string, string]()
-    return TemplateRegistry(ln, lc, lm, inames, iconts, im)
+    return TemplateRegistry()
 
 fn template_register_layout(tr: TemplateRegistry, name: string, content: string) -> void:
     tr.layout_names.push(name)
     tr.layout_contents.push(content)
     tr.layout_map[name] = content
+    fm := fm_parse_document(content)
+    tr.layout_bodies[name] = fm.body
+    let mut p_lay: string = ""
+    if fm.fields.has("layout") == 1:
+        p_lay = fm.fields["layout"]
+    tr.layout_parents[name] = p_lay
 
 fn template_register_include(tr: TemplateRegistry, name: string, content: string) -> void:
     tr.include_names.push(name)
@@ -132,6 +134,14 @@ fn _tmpl_resolve_expr(expr_raw: string, vars: dict[string, string], ctx: RenderC
         dk := substring(e, 10, string_length(e) - 10)
         if ctx.data.flat.has(dk) == 1:
             return ctx.data.flat[dk]
+    dot_pos := ssg_find_from(e, ".", 0)
+    if dot_pos > 0:
+        rname := substring(e, 0, dot_pos)
+        rrest := substring(e, dot_pos + 1, string_length(e) - dot_pos - 1)
+        if vars.has("__prefix:" + rname) == 1:
+            fk := vars["__prefix:" + rname] + "." + rrest
+            if ctx.data.flat.has(fk) == 1:
+                return ctx.data.flat[fk]
     if ssg_starts_with(e, "site.") == 1:
         ck := substring(e, 5, string_length(e) - 5)
         if ctx.config.custom.has(ck) == 1:
@@ -266,6 +276,108 @@ fn _tmpl_apply_single_filter(val: string, filter_raw: string, vars: dict[string,
         return farg + val
     elif fname == "remove":
         return ssg_replace_all(val, farg, "")
+    elif fname == "uniq":
+        parts := ssg_split(val, ",")
+        seen := dict[string, int]()
+        sb := sb_new_cap(string_length(val) + 16)
+        let mut ui: int = 0
+        let mut uc: int = 0
+        while ui < len(parts):
+            pt := ssg_trim(parts[ui])
+            if string_length(pt) > 0 and seen.has(pt) == 0:
+                seen[pt] = 1
+                if uc > 0: sb_append(sb, ",")
+                sb_append(sb, pt)
+                uc = uc + 1
+            ui = ui + 1
+        out := sb_to_str(sb)
+        sb_free(sb)
+        return out
+    elif fname == "compact":
+        parts := ssg_split(val, ",")
+        sb := sb_new_cap(string_length(val) + 16)
+        let mut ci: int = 0
+        let mut cc: int = 0
+        while ci < len(parts):
+            pt := ssg_trim(parts[ci])
+            if string_length(pt) > 0:
+                if cc > 0: sb_append(sb, ",")
+                sb_append(sb, pt)
+                cc = cc + 1
+            ci = ci + 1
+        out := sb_to_str(sb)
+        sb_free(sb)
+        return out
+    elif fname == "sort":
+        parts := ssg_split(val, ",")
+        let mut arr: vector[string] = []
+        let mut si: int = 0
+        while si < len(parts):
+            pt := ssg_trim(parts[si])
+            if string_length(pt) > 0:
+                arr.push(pt)
+            si = si + 1
+        let mut ai: int = 1
+        while ai < len(arr):
+            key := arr[ai]
+            let mut aj: int = ai - 1
+            while aj >= 0:
+                if arr[aj] <= key:
+                    break
+                arr[aj + 1] = arr[aj]
+                aj = aj - 1
+            arr[aj + 1] = key
+            ai = ai + 1
+        sb := sb_new_cap(string_length(val) + 16)
+        let mut oi: int = 0
+        while oi < len(arr):
+            if oi > 0: sb_append(sb, ",")
+            sb_append(sb, arr[oi])
+            oi = oi + 1
+        out := sb_to_str(sb)
+        sb_free(sb)
+        return out
+    elif fname == "reverse":
+        parts := ssg_split(val, ",")
+        sb := sb_new_cap(string_length(val) + 16)
+        let mut ri: int = len(parts) - 1
+        let mut rc: int = 0
+        while ri >= 0:
+            pt := ssg_trim(parts[ri])
+            if string_length(pt) > 0:
+                if rc > 0: sb_append(sb, ",")
+                sb_append(sb, pt)
+                rc = rc + 1
+            ri = ri - 1
+        out := sb_to_str(sb)
+        sb_free(sb)
+        return out
+    elif fname == "slice":
+        s_parts := ssg_split(farg, ",")
+        let mut st_i: int = 0
+        let mut ln_i: int = 1
+        if len(s_parts) >= 1: st_i = ssg_parse_int(ssg_trim(s_parts[0]), 0)
+        if len(s_parts) >= 2: ln_i = ssg_parse_int(ssg_trim(s_parts[1]), 1)
+        if st_i < 0: st_i = 0
+        if ln_i < 0: ln_i = 0
+        if ssg_contains(val, ",") == 1:
+            parts := ssg_split(val, ",")
+            sb := sb_new_cap(64)
+            let mut pi: int = st_i
+            let mut pc: int = 0
+            while pi < len(parts) and pc < ln_i:
+                if pc > 0: sb_append(sb, ",")
+                sb_append(sb, ssg_trim(parts[pi]))
+                pi = pi + 1
+                pc = pc + 1
+            out := sb_to_str(sb)
+            sb_free(sb)
+            return out
+        vlen := string_length(val)
+        if st_i >= vlen: return ""
+        let mut take: int = ln_i
+        if st_i + take > vlen: take = vlen - st_i
+        return substring(val, st_i, take)
     return val
 
 fn _tmpl_eval_output_expr(expr_raw: string, vars: dict[string, string], ctx: RenderContext) -> string:
@@ -405,6 +517,59 @@ fn _tmpl_bind_page_item(lvars: dict[string, string], var_name: string, p: PageSu
         lvars[var_name + "." + k] = p.meta[k]
         i = i + 1
 
+fn _tmpl_item_field(p: PageSummary, field: string) -> string:
+    if field == "title": return p.title
+    elif field == "url": return p.url
+    elif field == "date": return p.date
+    elif field == "year":
+        if string_length(p.date) >= 4: return substring(p.date, 0, 4)
+        return ""
+    elif field == "author": return p.author
+    elif field == "description": return p.description
+    elif field == "tags": return p.tags
+    elif field == "categories": return p.categories
+    elif field == "collection": return p.collection
+    elif field == "slug": return p.slug
+    elif field == "excerpt": return p.excerpt
+    elif field == "lang": return p.lang
+    elif field == "reading_time": return str(p.reading_time)
+    if p.meta.has(field) == 1:
+        return p.meta[field]
+    return ""
+
+fn _tmpl_parse_pipe_two_args(arg_raw: string, &a0: string, &a1: string) -> void:
+    a0 = ""
+    a1 = ""
+    c := ssg_find_from(arg_raw, ",", 0)
+    if c > 0:
+        a0 = ssg_strip_quotes(ssg_trim(substring(arg_raw, 0, c)))
+        a1 = ssg_strip_quotes(ssg_trim(substring(arg_raw, c + 1, string_length(arg_raw) - c - 1)))
+    else:
+        a0 = ssg_strip_quotes(ssg_trim(arg_raw))
+
+fn _tmpl_split_pipes_outside_quotes(raw: string) -> vector[string]:
+    let mut out: vector[string] = []
+    rlen := string_length(raw)
+    let mut start: int = 0
+    let mut in_q: int = 0
+    let mut q_ch: int = 0
+    let mut i: int = 0
+    while i < rlen:
+        ch := byte_at(raw, i)
+        if in_q == 1:
+            if ch == q_ch:
+                in_q = 0
+        else:
+            if ch == 34 or ch == 39:
+                in_q = 1
+                q_ch = ch
+            elif ch == 124:
+                out.push(ssg_trim(substring(raw, start, i - start)))
+                start = i + 1
+        i = i + 1
+    out.push(ssg_trim(substring(raw, start, rlen - start)))
+    return out
+
 fn _tmpl_render_internal(tr: TemplateRegistry, tmpl: string, vars: dict[string, string], ctx: RenderContext, depth: int) -> string:
     if depth > 24:
         return tmpl
@@ -443,9 +608,10 @@ fn _tmpl_render_internal(tr: TemplateRegistry, tmpl: string, vars: dict[string, 
                 inc_rest := ssg_trim(substring(expr, 8, string_length(expr) - 8))
                 let mut inc_name: string = inc_rest
                 sp := ssg_find_from(inc_rest, " ", 0)
-                let inc_vars := _tmpl_clone_dict(vars)
                 if sp > 0:
                     inc_name = ssg_strip_quotes(substring(inc_rest, 0, sp))
+                    inc_html := template_get_include(tr, inc_name)
+                    inc_vars := _tmpl_clone_dict(vars)
                     params_str := substring(inc_rest, sp + 1, string_length(inc_rest) - sp - 1)
                     ppairs := ssg_split(params_str, " ")
                     let mut pi: int = 0
@@ -457,10 +623,14 @@ fn _tmpl_render_internal(tr: TemplateRegistry, tmpl: string, vars: dict[string, 
                             inc_vars["include." + pk] = pv
                             inc_vars[pk] = pv
                         pi = pi + 1
+                    sb_append(sb, _tmpl_render_internal(tr, inc_html, inc_vars, ctx, depth + 1))
                 else:
                     inc_name = ssg_strip_quotes(inc_rest)
-                inc_html := template_get_include(tr, inc_name)
-                sb_append(sb, _tmpl_render_internal(tr, inc_html, inc_vars, ctx, depth + 1))
+                    inc_html := template_get_include(tr, inc_name)
+                    if ssg_contains(inc_html, "{% assign ") == 1 or ssg_contains(inc_html, "{% capture ") == 1:
+                        sb_append(sb, _tmpl_render_internal(tr, inc_html, _tmpl_clone_dict(vars), ctx, depth + 1))
+                    else:
+                        sb_append(sb, _tmpl_render_internal(tr, inc_html, vars, ctx, depth + 1))
             elif ssg_starts_with(expr, "<") == 0:
                 sb_append(sb, _tmpl_eval_output_expr(expr, vars, ctx))
             else:
@@ -480,10 +650,11 @@ fn _tmpl_render_internal(tr: TemplateRegistry, tmpl: string, vars: dict[string, 
         if ssg_starts_with(tag, "include ") == 1:
             inc_rest := ssg_trim(substring(tag, 8, string_length(tag) - 8))
             let mut inc_name: string = inc_rest
-            let inc_vars := _tmpl_clone_dict(vars)
             sp := ssg_find_from(inc_rest, " ", 0)
             if sp > 0:
                 inc_name = ssg_strip_quotes(substring(inc_rest, 0, sp))
+                inc_html := template_get_include(tr, inc_name)
+                inc_vars := _tmpl_clone_dict(vars)
                 params_str := substring(inc_rest, sp + 1, string_length(inc_rest) - sp - 1)
                 ppairs := ssg_split(params_str, " ")
                 let mut pi: int = 0
@@ -495,10 +666,14 @@ fn _tmpl_render_internal(tr: TemplateRegistry, tmpl: string, vars: dict[string, 
                         inc_vars["include." + pk] = pv
                         inc_vars[pk] = pv
                     pi = pi + 1
+                sb_append(sb, _tmpl_render_internal(tr, inc_html, inc_vars, ctx, depth + 1))
             else:
                 inc_name = ssg_strip_quotes(inc_rest)
-            inc_html := template_get_include(tr, inc_name)
-            sb_append(sb, _tmpl_render_internal(tr, inc_html, inc_vars, ctx, depth + 1))
+                inc_html := template_get_include(tr, inc_name)
+                if ssg_contains(inc_html, "{% assign ") == 1 or ssg_contains(inc_html, "{% capture ") == 1:
+                    sb_append(sb, _tmpl_render_internal(tr, inc_html, _tmpl_clone_dict(vars), ctx, depth + 1))
+                else:
+                    sb_append(sb, _tmpl_render_internal(tr, inc_html, vars, ctx, depth + 1))
             pos = end_t + 2
             continue
 
@@ -568,7 +743,7 @@ fn _tmpl_render_internal(tr: TemplateRegistry, tmpl: string, vars: dict[string, 
             pos = close_end + 2
             continue
 
-        // 5. {% for item in collection [limit:N] [reversed] %} ... {% endfor %}
+        // 5. {% for item in collection [| where | sort | group_by | uniq | slice] [limit:N] [reversed] %} ... {% endfor %}
         if ssg_starts_with(tag, "for ") == 1:
             let mut sp_pos: vector[int] = []
             let mut sp_tag: vector[string] = []
@@ -582,23 +757,31 @@ fn _tmpl_render_internal(tr: TemplateRegistry, tmpl: string, vars: dict[string, 
             if in_idx > 0:
                 loop_var := ssg_trim(substring(for_spec, 0, in_idx))
                 rest := ssg_trim(substring(for_spec, in_idx + 4, string_length(for_spec) - in_idx - 4))
-                rparts := ssg_split(rest, " ")
-                col_expr := rparts[0]
+                pipe_segs := _tmpl_split_pipes_outside_quotes(rest)
+                base_segs := ssg_split(pipe_segs[0], " ")
+                col_expr := ssg_trim(base_segs[0])
                 let mut limit_n: int = 1000000
                 let mut reversed: int = 0
-                let mut rpi: int = 1
-                while rpi < len(rparts):
-                    rp := ssg_trim(rparts[rpi])
-                    if rp == "reversed":
-                        reversed = 1
-                    elif ssg_starts_with(rp, "limit:") == 1:
-                        limit_n = ssg_parse_int(substring(rp, 6, string_length(rp) - 6), 1000000)
-                    rpi = rpi + 1
+                let mut bsi: int = 1
+                while bsi < len(base_segs):
+                    rp := ssg_trim(base_segs[bsi])
+                    if rp == "reversed": reversed = 1
+                    elif ssg_starts_with(rp, "limit:") == 1: limit_n = ssg_parse_int(substring(rp, 6, string_length(rp) - 6), 1000000)
+                    bsi = bsi + 1
 
-                // Case A: Structured PageSummary collections (site.posts, site.pages, paginator.posts, collections.<name>, site.tags.<t>, site.categories.<c>)
+                // Case A: Structured PageSummary collections (including __pool: dynamic group_by sublists)
                 let mut idx_list: vector[int] = []
                 let mut is_page_col: int = 0
-                if col_expr == "site.posts" or col_expr == "posts":
+                if vars.has("__pool:" + col_expr) == 1:
+                    is_page_col = 1
+                    pool_csv := vars["__pool:" + col_expr]
+                    if string_length(pool_csv) > 0:
+                        pp := ssg_split(pool_csv, ",")
+                        let mut ppi: int = 0
+                        while ppi < len(pp):
+                            idx_list.push(ssg_parse_int(pp[ppi], 0))
+                            ppi = ppi + 1
+                elif col_expr == "site.posts" or col_expr == "posts":
                     idx_list = ctx.post_indices
                     is_page_col = 1
                 elif col_expr == "site.pages" or col_expr == "pages":
@@ -624,29 +807,150 @@ fn _tmpl_render_internal(tr: TemplateRegistry, tmpl: string, vars: dict[string, 
                     is_page_col = 1
 
                 if is_page_col == 1:
-                    total := len(idx_list)
-                    let mut max_c: int = total
-                    if limit_n < max_c: max_c = limit_n
-                    let mut li: int = 0
-                    while li < max_c:
-                        let mut src_i: int = idx_list[li]
-                        if reversed == 1:
-                            src_i = idx_list[total - 1 - li]
-                        p := ctx.items[src_i]
-                        lvars := _tmpl_clone_dict(vars)
-                        _tmpl_bind_page_item(lvars, loop_var, p)
-                        lvars["forloop.index"] = str(li + 1)
-                        lvars["forloop.index0"] = str(li)
-                        lvars["forloop.length"] = str(max_c)
-                        if li == 0: lvars["forloop.first"] = "true"
-                        else: lvars["forloop.first"] = "false"
-                        if li == max_c - 1: lvars["forloop.last"] = "true"
-                        else: lvars["forloop.last"] = "false"
-                        sb_append(sb, _tmpl_render_internal(tr, inner, lvars, ctx, depth + 1))
-                        li = li + 1
-                // Case B: site.data.<dataset> structured records
-                elif ssg_starts_with(col_expr, "site.data.") == 1:
-                    ds_key := substring(col_expr, 10, string_length(col_expr) - 10)
+                    let mut cur: vector[int] = []
+                    let mut ci0: int = 0
+                    while ci0 < len(idx_list):
+                        cur.push(idx_list[ci0])
+                        ci0 = ci0 + 1
+
+                    let mut group_field: string = ""
+                    let mut psi: int = 1
+                    while psi < len(pipe_segs):
+                        seg := pipe_segs[psi]
+                        let mut fname: string = seg
+                        let mut farg: string = ""
+                        colp := ssg_find_from(seg, ":", 0)
+                        if colp > 0:
+                            fname = ssg_lower(ssg_trim(substring(seg, 0, colp)))
+                            farg = ssg_trim(substring(seg, colp + 1, string_length(seg) - colp - 1))
+                        else:
+                            fname = ssg_lower(ssg_trim(seg))
+                            if ssg_contains(fname, " reversed") == 1:
+                                reversed = 1
+                                fname = ssg_trim(ssg_replace_all(fname, "reversed", ""))
+
+                        if fname == "where":
+                            let mut wf: string = ""
+                            let mut wv: string = ""
+                            _tmpl_parse_pipe_two_args(farg, wf, wv)
+                            let mut nxt: vector[int] = []
+                            let mut wi: int = 0
+                            while wi < len(cur):
+                                p_item := ctx.items[cur[wi]]
+                                fv := _tmpl_item_field(p_item, wf)
+                                if fv == wv or ((wf == "tags" or wf == "categories") and ssg_contains(fv, wv) == 1):
+                                    nxt.push(cur[wi])
+                                wi = wi + 1
+                            cur = nxt
+                        elif fname == "sort":
+                            let mut sf: string = ssg_strip_quotes(farg)
+                            if string_length(sf) == 0: sf = "title"
+                            let mut ai: int = 1
+                            while ai < len(cur):
+                                ki := cur[ai]
+                                kv := _tmpl_item_field(ctx.items[ki], sf)
+                                let mut aj: int = ai - 1
+                                while aj >= 0:
+                                    if _tmpl_item_field(ctx.items[cur[aj]], sf) <= kv:
+                                        break
+                                    cur[aj + 1] = cur[aj]
+                                    aj = aj - 1
+                                cur[aj + 1] = ki
+                                ai = ai + 1
+                        elif fname == "reverse" or fname == "reversed":
+                            reversed = 1 - reversed
+                        elif fname == "uniq":
+                            let mut nxt: vector[int] = []
+                            seen_u := dict[string, int]()
+                            let mut ui: int = 0
+                            while ui < len(cur):
+                                ukey := ctx.items[cur[ui]].url
+                                if seen_u.has(ukey) == 0:
+                                    seen_u[ukey] = 1
+                                    nxt.push(cur[ui])
+                                ui = ui + 1
+                            cur = nxt
+                        elif fname == "slice":
+                            let mut sa0: string = ""
+                            let mut sa1: string = ""
+                            _tmpl_parse_pipe_two_args(farg, sa0, sa1)
+                            s_off := ssg_parse_int(sa0, 0)
+                            s_len := ssg_parse_int(sa1, len(cur))
+                            let mut nxt: vector[int] = []
+                            let mut si2: int = s_off
+                            while si2 >= 0 and si2 < len(cur) and len(nxt) < s_len:
+                                nxt.push(cur[si2])
+                                si2 = si2 + 1
+                            cur = nxt
+                        elif fname == "limit":
+                            lim_v := ssg_parse_int(ssg_strip_quotes(farg), limit_n)
+                            if lim_v < limit_n: limit_n = lim_v
+                        elif fname == "group_by":
+                            group_field = ssg_strip_quotes(farg)
+                        psi = psi + 1
+
+                    if string_length(group_field) > 0:
+                        let mut g_names: vector[string] = []
+                        let mut g_pools: vector[string] = []
+                        g_map := dict[string, int]()
+                        let mut gi: int = 0
+                        while gi < len(cur):
+                            gval := _tmpl_item_field(ctx.items[cur[gi]], group_field)
+                            if g_map.has(gval) == 0:
+                                g_map[gval] = len(g_names)
+                                g_names.push(gval)
+                                g_pools.push(str(cur[gi]))
+                            else:
+                                slot_g := g_map[gval]
+                                g_pools[slot_g] = g_pools[slot_g] + "," + str(cur[gi])
+                            gi = gi + 1
+                        let mut g_tot: int = len(g_names)
+                        if limit_n < g_tot: g_tot = limit_n
+                        let mut gki: int = 0
+                        while gki < g_tot:
+                            let mut gi_src: int = gki
+                            if reversed == 1: gi_src = len(g_names) - 1 - gki
+                            lvars := _tmpl_clone_dict(vars)
+                            lvars[loop_var + ".name"] = g_names[gi_src]
+                            csv_g := g_pools[gi_src]
+                            lvars[loop_var + ".size"] = str(len(ssg_split(csv_g, ",")))
+                            lvars["__pool:" + loop_var + ".items"] = csv_g
+                            lvars["forloop.index"] = str(gki + 1)
+                            lvars["forloop.index0"] = str(gki)
+                            lvars["forloop.length"] = str(g_tot)
+                            sb_append(sb, _tmpl_render_internal(tr, inner, lvars, ctx, depth + 1))
+                            gki = gki + 1
+                    else:
+                        total := len(cur)
+                        let mut max_c: int = total
+                        if limit_n < max_c: max_c = limit_n
+                        let mut li: int = 0
+                        while li < max_c:
+                            let mut src_i: int = cur[li]
+                            if reversed == 1:
+                                src_i = cur[total - 1 - li]
+                            p := ctx.items[src_i]
+                            lvars := _tmpl_clone_dict(vars)
+                            _tmpl_bind_page_item(lvars, loop_var, p)
+                            lvars["forloop.index"] = str(li + 1)
+                            lvars["forloop.index0"] = str(li)
+                            lvars["forloop.length"] = str(max_c)
+                            if li == 0: lvars["forloop.first"] = "true"
+                            else: lvars["forloop.first"] = "false"
+                            if li == max_c - 1: lvars["forloop.last"] = "true"
+                            else: lvars["forloop.last"] = "false"
+                            sb_append(sb, _tmpl_render_internal(tr, inner, lvars, ctx, depth + 1))
+                            li = li + 1
+                // Case B: site.data.<dataset> or nested row array (e.g. sec.items) structured records
+                elif ssg_starts_with(col_expr, "site.data.") == 1 or (ssg_find_from(col_expr, ".", 0) > 0 and vars.has("__prefix:" + substring(col_expr, 0, ssg_find_from(col_expr, ".", 0))) == 1):
+                    let mut ds_key: string = ""
+                    if ssg_starts_with(col_expr, "site.data.") == 1:
+                        ds_key = substring(col_expr, 10, string_length(col_expr) - 10)
+                    else:
+                        dp := ssg_find_from(col_expr, ".", 0)
+                        rn := substring(col_expr, 0, dp)
+                        rr := substring(col_expr, dp + 1, string_length(col_expr) - dp - 1)
+                        ds_key = vars["__prefix:" + rn] + "." + rr
                     let mut row_count: int = 0
                     if ctx.data.list_counts.has(ds_key) == 1:
                         row_count = ctx.data.list_counts[ds_key]
@@ -655,8 +959,10 @@ fn _tmpl_render_internal(tr: TemplateRegistry, tmpl: string, vars: dict[string, 
                     dkeys := ctx.data.flat.keys()
                     while ri < row_count:
                         lvars := _tmpl_clone_dict(vars)
-                        rec_prefix := ds_key + "[" + str(ri) + "]."
+                        row_pfx := ds_key + "[" + str(ri) + "]"
+                        rec_prefix := row_pfx + "."
                         plen := string_length(rec_prefix)
+                        lvars["__prefix:" + loop_var] = row_pfx
                         let mut dki: int = 0
                         while dki < len(dkeys):
                             dk := dkeys[dki]
@@ -669,13 +975,13 @@ fn _tmpl_render_internal(tr: TemplateRegistry, tmpl: string, vars: dict[string, 
                         lvars["forloop.length"] = str(row_count)
                         sb_append(sb, _tmpl_render_internal(tr, inner, lvars, ctx, depth + 1))
                         ri = ri + 1
-                // Case C: Simple string list (e.g. page.tags / comma list)
+                // Case C: Simple string list (with | uniq | sort | reverse | slice pipes)
                 else:
                     let mut str_items: vector[string] = []
                     if ctx.lists.has(col_expr) == 1:
                         str_items = ssg_split(ctx.lists[col_expr], "\t")
                     else:
-                        raw_str := _tmpl_resolve_expr(col_expr, vars, ctx)
+                        raw_str := _tmpl_eval_output_expr(rest, vars, ctx)
                         if string_length(raw_str) > 0:
                             str_items = ssg_split(raw_str, ",")
                     total := len(str_items)
@@ -710,28 +1016,54 @@ fn _tmpl_render_internal(tr: TemplateRegistry, tmpl: string, vars: dict[string, 
 // Multi-Level Layout Inheritance Chain Renderer
 // ------------------------------------------------------------------------------
 
-fn template_v2_render(tr: TemplateRegistry, layout_name: string, body_html: string, page_vars: dict[string, string], ctx: RenderContext) -> string:
+fn _template_resolve_key(tr: TemplateRegistry, name: string) -> string:
+    if tr.layout_bodies.has(name) == 1:
+        return name
+    base := ssg_path_stem(name)
+    if tr.layout_bodies.has(base) == 1:
+        return base
+    if tr.layout_bodies.has("default") == 1:
+        return "default"
+    if len(tr.layout_names) > 0:
+        return tr.layout_names[0]
+    return ""
+
+fn _template_v2_render_impl(tr: TemplateRegistry, layout_name: string, body_html: string, page_vars: dict[string, string], ctx: RenderContext, clone_first: int) -> string:
     let mut cur_content: string = body_html
     let mut cur_layout: string = layout_name
     if string_length(cur_layout) == 0:
         cur_layout = "default"
     let mut hops: int = 0
     while string_length(cur_layout) > 0 and cur_layout != "none" and hops < 8:
-        raw := template_get_layout(tr, cur_layout)
-        // Check if layout itself declares ---\nlayout: parent\n---
-        fm := fm_parse_document(raw)
+        key := _template_resolve_key(tr, cur_layout)
         let mut parent_layout: string = ""
-        if fm.fields.has("layout") == 1:
-            parent_layout = fm.fields["layout"]
-        let vars := _tmpl_clone_dict(page_vars)
+        let mut lbody: string = ""
+        if string_length(key) > 0:
+            lbody = tr.layout_bodies[key]
+            parent_layout = tr.layout_parents[key]
+        else:
+            raw := template_get_layout(tr, cur_layout)
+            fm := fm_parse_document(raw)
+            lbody = fm.body
+            if fm.fields.has("layout") == 1:
+                parent_layout = fm.fields["layout"]
+        let mut vars: dict[string, string] = page_vars
+        if clone_first == 1 or hops > 0:
+            vars = _tmpl_clone_dict(page_vars)
         vars["content"] = cur_content
         vars["site_name"] = ctx.config.site_name
         vars["site_tagline"] = ctx.config.site_tagline
         vars["base_url"] = ctx.config.base_url
         vars["year"] = "2026"
-        cur_content = _tmpl_render_internal(tr, fm.body, vars, ctx, 0)
+        cur_content = _tmpl_render_internal(tr, lbody, vars, ctx, 0)
         if parent_layout == cur_layout:
             break
         cur_layout = parent_layout
         hops = hops + 1
     return cur_content
+
+fn template_v2_render(tr: TemplateRegistry, layout_name: string, body_html: string, page_vars: dict[string, string], ctx: RenderContext) -> string:
+    return _template_v2_render_impl(tr, layout_name, body_html, page_vars, ctx, 1)
+
+fn template_v2_render_owned(tr: TemplateRegistry, layout_name: string, body_html: string, page_vars: dict[string, string], ctx: RenderContext) -> string:
+    return _template_v2_render_impl(tr, layout_name, body_html, page_vars, ctx, 0)

@@ -158,33 +158,65 @@ fn cli_run_serve(cfg: SsgConfig, port: int, watch: int) -> int:
     srv.live_reload = watch
     let mut watch_dirs: vector[string] = []
     watch_dirs.push(cfg.site_dir)
+    let mut ifd: i32 = -1
     if watch == 1:
         srv.reload_token = fs_max_source_signature(watch_dirs)
+        ifd = fs_inotify_open(watch_dirs)
 
     lfd := net_listen(port)
     if lfd < 0:
+        if ifd >= 0: close(ifd)
         println("Error: failed to bind TCP port " + str(port))
         return 1
 
     println("⚡ Cluster-SSG Dev Server listening on http://localhost:" + str(port))
-    println("   Serving: " + cfg.dist_dir + " (watching " + cfg.site_dir + " | binary=" + str(cfg.output_binary) + ")")
-    let mut req_since_check: int = 0
+    println("   Serving: " + cfg.dist_dir + " (watching " + cfg.site_dir + " | inotify_fd=" + str(ifd) + " | sse=on | binary=" + str(cfg.output_binary) + ")")
+    let mut sse_fds: vector[i32] = []
     while 1 == 1:
-        cfd := net_accept(lfd)
-        if cfd >= 0:
-            raw := net_read(cfd, 8192)
-            req_path := ssg_parse_request_path(raw)
-            if watch == 1 and req_path == "/_cluster_reload":
-                req_since_check = req_since_check + 1
-                // Check signature cleanly when browser polls /_cluster_reload
+        ev := fs_poll_fd2(lfd, ifd, 250)
+        if watch == 1 and (ev & 2) != 0:
+            if fs_inotify_drain(ifd, watch_dirs) == 1:
                 cur_sig := fs_max_source_signature(watch_dirs)
                 if cur_sig != srv.reload_token:
-                    println("[Watcher] Change detected! Rebuilding...")
+                    println("[Watcher] Change detected via inotify! Rebuilding...")
+                    cfg.incremental = 1
                     builder_run_all(cfg)
                     srv.reload_token = cur_sig
-            resp := ssg_handle_http(srv, raw)
-            net_write(cfd, resp)
-            net_close(cfd)
+                    msg := "event: reload\ndata: " + cur_sig + "\n\n"
+                    let mut kept: vector[i32] = []
+                    let mut si: int = 0
+                    while si < len(sse_fds):
+                        sfd := sse_fds[si]
+                        nw := net_write(sfd, msg)
+                        if nw > 0:
+                            kept.push(sfd)
+                        else:
+                            net_close(sfd)
+                        si = si + 1
+                    sse_fds = kept
+        if (ev & 1) != 0:
+            cfd := net_accept(lfd)
+            if cfd >= 0:
+                raw := net_read(cfd, 8192)
+                req_path := ssg_parse_request_path(raw)
+                if watch == 1 and req_path == "/_cluster_sse":
+                    hdr := "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream; charset=utf-8\r\nCache-Control: no-cache\r\nConnection: keep-alive\r\nX-Cluster-SSE: 1\r\n\r\nretry: 500\nevent: token\ndata: " + srv.reload_token + "\n\n"
+                    if net_write(cfd, hdr) > 0:
+                        sse_fds.push(cfd)
+                    else:
+                        net_close(cfd)
+                else:
+                    if watch == 1 and req_path == "/_cluster_reload":
+                        cur_sig := fs_max_source_signature(watch_dirs)
+                        if cur_sig != srv.reload_token:
+                            println("[Watcher] Change detected! Rebuilding...")
+                            cfg.incremental = 1
+                            builder_run_all(cfg)
+                            srv.reload_token = cur_sig
+                    resp := ssg_handle_http(srv, raw)
+                    net_write(cfd, resp)
+                    net_close(cfd)
+    if ifd >= 0: close(ifd)
     net_close(lfd)
     return 0
 
@@ -198,7 +230,7 @@ fn cli_run_bench(page_count: int, on_disk: int) -> int:
         broot := "/tmp/cl_ssg_bench_site"
         bsite := ssg_path_join(broot, "site/pages")
         bdist := ssg_path_join(broot, "dist")
-        sys_run("rm -rf \"" + broot + "\"")
+        fs_remove_rf(broot)
         ssg_ensure_dir(bsite, dir_cache)
         sample_md := "---\ntitle: Disk Bench Page\nauthor: Cluster Bench\ndate: 2026-11-27\ntags: [perf, bench, cluster]\n---\n\n# Performance Test\n\nBenchmarking real disk compilation in pure Cluster.\n\n```cluster\nfn sum(n: int) -> int:\n    return n * (n + 1) / 2\n```\n"
         let mut gi: int = 0
@@ -218,7 +250,7 @@ fn cli_run_bench(page_count: int, on_disk: int) -> int:
         println("  + Pages Compiled to Disk: " + str(rep.pages_built))
         println("  + Bytes Written:          " + str(rep.total_bytes_written))
         println("  + Elapsed (us/ms):        " + str(dt_us) + " us (" + str(ms) + " ms)")
-        sys_run("rm -rf \"" + broot + "\"")
+        fs_remove_rf(broot)
         return 0
 
     sample := "---\ntitle: Bench Page\nauthor: Cluster Bot\ndate: 2026-11-27\n---\n# Performance Test\n\nThis benchmarks pure `.cl` Markdown, frontmatter, template & island hydration.\n\n<island name=\"Counter\" client:load count=\"0\" />\n\n> Zero dependencies, compiled native ELF64."

@@ -12,11 +12,12 @@ import "src/fs_walk.cl"
 model AssetManifest:
     // Logical asset URL ("/static/style.css") -> hashed output URL ("/static/style.8f3a1c2b.css")
     url_map: dict[string, string]
+    img_dims: dict[string, string]
     bytes_written: int
     files_copied: int
 
 fn asset_manifest_new() -> AssetManifest:
-    return AssetManifest(dict[string, string](), 0, 0)
+    return AssetManifest()
 
 // ------------------------------------------------------------------------------
 // Pure-.cl CSS Minifier & @import Resolver
@@ -259,6 +260,61 @@ fn assets_probe_image_dims(img_path: string, &w_out: int, &h_out: int) -> int:
             h_out = _assets_read_u16_le(data, 8)
             if w_out > 0 and h_out > 0:
                 return 1
+    // JPEG: SOI (FF D8), scan SOF0 (C0) / SOF1 (C1) / SOF2 (C2) markers
+    if (ext == ".jpg" or ext == ".jpeg") and dlen >= 12:
+        if byte_at(data, 0) == 255 and byte_at(data, 1) == 216:
+            let mut pos: int = 2
+            while pos + 9 < dlen:
+                if byte_at(data, pos) != 255:
+                    pos = pos + 1
+                    continue
+                marker := byte_at(data, pos + 1)
+                if marker == 255:
+                    pos = pos + 1
+                    continue
+                if marker == 192 or marker == 193 or marker == 194:
+                    h_out = _assets_read_u16_be(data, pos + 5)
+                    w_out = _assets_read_u16_be(data, pos + 7)
+                    if w_out > 0 and h_out > 0:
+                        return 1
+                    return 0
+                if marker == 217 or marker == 218:
+                    break
+                if pos + 3 >= dlen:
+                    break
+                seg_len := _assets_read_u16_be(data, pos + 2)
+                if seg_len < 2:
+                    break
+                pos = pos + 2 + seg_len
+    // WebP: RIFF....WEBP + VP8X (extended), VP8 (lossy), VP8L (lossless)
+    if ext == ".webp" and dlen >= 30:
+        if byte_at(data, 0) == 82 and byte_at(data, 1) == 73 and byte_at(data, 2) == 70 and byte_at(data, 3) == 70 and byte_at(data, 8) == 87 and byte_at(data, 9) == 69 and byte_at(data, 10) == 66 and byte_at(data, 11) == 80:
+            c0 := byte_at(data, 12)
+            c1 := byte_at(data, 13)
+            c2 := byte_at(data, 14)
+            c3 := byte_at(data, 15)
+            // VP8X: 24-bit width-1 at 24..26, height-1 at 27..29
+            if c0 == 86 and c1 == 80 and c2 == 56 and c3 == 88 and dlen >= 30:
+                w_out = (byte_at(data, 24) | (byte_at(data, 25) << 8) | (byte_at(data, 26) << 16)) + 1
+                h_out = (byte_at(data, 27) | (byte_at(data, 28) << 8) | (byte_at(data, 29) << 16)) + 1
+                if w_out > 0 and h_out > 0:
+                    return 1
+            // VP8L: signature 0x2F at 20, packed 14-bit width-1 / height-1 at 21..24
+            elif c0 == 86 and c1 == 80 and c2 == 56 and c3 == 76 and dlen >= 25 and byte_at(data, 20) == 47:
+                b0 := byte_at(data, 21)
+                b1 := byte_at(data, 22)
+                b2 := byte_at(data, 23)
+                b3 := byte_at(data, 24)
+                w_out = (b0 | ((b1 & 63) << 8)) + 1
+                h_out = (((b1 >> 6) | (b2 << 2) | ((b3 & 15) << 10))) + 1
+                if w_out > 0 and h_out > 0:
+                    return 1
+            // VP8 : frame tag at 20..22, keyframe signature 9D 01 2A at 23..25, width/height at 26..29
+            elif c0 == 86 and c1 == 80 and c2 == 56 and c3 == 32 and dlen >= 30 and byte_at(data, 23) == 157 and byte_at(data, 24) == 1 and byte_at(data, 25) == 42:
+                w_out = _assets_read_u16_le(data, 26) & 16383
+                h_out = _assets_read_u16_le(data, 28) & 16383
+                if w_out > 0 and h_out > 0:
+                    return 1
     return 0
 
 // ------------------------------------------------------------------------------
@@ -267,6 +323,7 @@ fn assets_probe_image_dims(img_path: string, &w_out: int, &h_out: int) -> int:
 
 fn assets_process_all(site_dir: string, dist_dir: string, minify: int, hash_assets: int, compress: int, dir_cache: dict[string, int]) -> AssetManifest:
     man := asset_manifest_new()
+    z := ssg_zlib_init()
     let mut static_roots: vector[string] = []
     static_roots.push(ssg_path_join(site_dir, "static"))
     static_roots.push(ssg_path_join(site_dir, "assets"))
@@ -314,7 +371,8 @@ fn assets_process_all(site_dir: string, dist_dir: string, minify: int, hash_asse
                     man.bytes_written = man.bytes_written + string_length(content)
                     man.files_copied = man.files_copied + 1
                     if compress == 1:
-                        sys_run("gzip -kf -9 \"" + dst_path + "\" 2>/dev/null || true")
+                        if ssg_gzip_write(z, dst_path + ".gz", content) != 0:
+                            sys_run("gzip -kf -9 \"" + dst_path + "\" 2>/dev/null || true")
                 else:
                     let mut dst_sub: string = rel
                     if root_base != "public":
@@ -322,11 +380,57 @@ fn assets_process_all(site_dir: string, dist_dir: string, minify: int, hash_asse
                     dst_path := ssg_path_join(dist_dir, dst_sub)
                     copied_sz := fs_copy_file_raw(ap, dst_path, dir_cache)
                     man.url_map[orig_url] = "/" + dst_sub
+                    let mut iw: int = 0
+                    let mut ih: int = 0
+                    if assets_probe_image_dims(ap, iw, ih) == 1:
+                        man.img_dims["/" + dst_sub] = str(iw) + "x" + str(ih)
                     man.bytes_written = man.bytes_written + copied_sz
                     man.files_copied = man.files_copied + 1
                 fi = fi + 1
         ri = ri + 1
     return man
+
+fn _assets_inject_img_dims(html: string, man: AssetManifest) -> string:
+    if len(man.img_dims.keys()) == 0 or ssg_contains(html, "<img") == 0:
+        return html
+    hlen := string_length(html)
+    sb := sb_new_cap(hlen + 64)
+    let mut pos: int = 0
+    while pos < hlen:
+        idx := ssg_find_from(html, "<img", pos)
+        if idx < 0:
+            sb_append_slice(sb, html, pos, hlen - pos)
+            break
+        sb_append_slice(sb, html, pos, idx - pos)
+        end_tag := ssg_find_from(html, ">", idx)
+        if end_tag < 0:
+            sb_append_slice(sb, html, idx, hlen - idx)
+            break
+        tag := substring(html, idx, end_tag - idx + 1)
+        let mut out_tag: string = tag
+        if ssg_contains(tag, "width=") == 0 and ssg_contains(tag, "height=") == 0:
+            s_idx := ssg_find_from(tag, "src=\"", 0)
+            if s_idx >= 0:
+                q_end := ssg_find_from(tag, "\"", s_idx + 5)
+                if q_end > s_idx + 5:
+                    src_u := substring(tag, s_idx + 5, q_end - (s_idx + 5))
+                    if man.img_dims.has(src_u) == 1:
+                        wh := man.img_dims[src_u]
+                        x_pos := ssg_find_from(wh, "x", 0)
+                        if x_pos > 0:
+                            w_s := substring(wh, 0, x_pos)
+                            h_s := substring(wh, x_pos + 1, string_length(wh) - x_pos - 1)
+                            ins := " width=\"" + w_s + "\" height=\"" + h_s + "\""
+                            tlen := string_length(tag)
+                            if tlen >= 2 and byte_at(tag, tlen - 2) == 47:
+                                out_tag = substring(tag, 0, tlen - 2) + ins + " />"
+                            else:
+                                out_tag = substring(tag, 0, tlen - 1) + ins + ">"
+        sb_append(sb, out_tag)
+        pos = end_tag + 1
+    out := sb_to_str(sb)
+    sb_free(sb)
+    return out
 
 fn assets_rewrite_html_urls(html: string, man: AssetManifest) -> string:
     let mut out: string = html
@@ -338,4 +442,4 @@ fn assets_rewrite_html_urls(html: string, man: AssetManifest) -> string:
         if k != v and ssg_contains(out, k) == 1:
             out = ssg_replace_all(out, k, v)
         i = i + 1
-    return out
+    return _assets_inject_img_dims(out, man)

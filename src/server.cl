@@ -94,7 +94,11 @@ fn ssg_handle_http(srv: SsgServer, raw_http: string) -> string:
     srv.total_requests = srv.total_requests + 1
     req_path := ssg_parse_request_path(raw_http)
 
-    // Live-reload polling endpoint used by dev watcher client
+    // Live-reload SSE & fallback polling endpoints used by dev watcher client
+    if req_path == "/_cluster_sse":
+        sse_body := "retry: 500\nevent: token\ndata: " + srv.reload_token + "\n\n"
+        return "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream; charset=utf-8\r\nCache-Control: no-cache\r\nX-Cluster-SSE: 1\r\nConnection: close\r\n\r\n" + sse_body
+
     if req_path == "/_cluster_reload":
         body := "{\"token\":\"" + srv.reload_token + "\"}"
         return "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: " + str(string_length(body)) + "\r\nCache-Control: no-store\r\nConnection: close\r\n\r\n" + body
@@ -119,7 +123,7 @@ fn ssg_handle_http(srv: SsgServer, raw_http: string) -> string:
         let mut content: string = file_read(target_file)
         mime := ssg_get_mime_type(target_file)
         if srv.live_reload == 1 and ssg_ends_with(target_file, ".html") == 1 and ssg_contains(content, "</body>") == 1:
-            lr_script := "<script>(function(){var tok='" + srv.reload_token + "';setInterval(function(){fetch('/_cluster_reload').then(function(r){return r.json();}).then(function(d){if(d.token&&d.token!==tok){location.reload();}}).catch(function(){});},1000);})();</script></body>"
+            lr_script := "<script>(function(){var tok='" + srv.reload_token + "';if('EventSource'in window){var es=new EventSource('/_cluster_sse');es.addEventListener('reload',function(){location.reload();});es.addEventListener('token',function(e){if(e.data&&e.data!==tok)location.reload();});}else{setInterval(function(){fetch('/_cluster_reload').then(function(r){return r.json();}).then(function(d){if(d.token&&d.token!==tok)location.reload();}).catch(function(){});},1000);}})();</script></body>"
             content = ssg_replace_all(content, "</body>", lr_script)
         return "HTTP/1.1 200 OK\r\nContent-Type: " + mime + "\r\nContent-Length: " + str(string_length(content)) + "\r\nX-Powered-By: Cluster-SSG/2.0\r\nConnection: close\r\n\r\n" + content
 

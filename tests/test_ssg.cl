@@ -243,9 +243,171 @@ fn test_asset_minifiers() -> void:
     assert(html_min == "<div> <p>hi</p> </div>")
     println("  ✓ Pure-.cl CSS/JS/HTML minifiers passed.")
 
+fn test_sse_and_inotify() -> void:
+    println("[Test 15/19] Testing SSE Live Reload Endpoint & inotify Watcher...")
+    srv := ssg_server_new(3099, "dist", 0)
+    srv.live_reload = 1
+    srv.reload_token = "tok42"
+    sse_resp := ssg_handle_http(srv, "GET /_cluster_sse HTTP/1.1\r\nHost: localhost\r\n\r\n")
+    assert(ssg_contains(sse_resp, "Content-Type: text/event-stream") == 1)
+    assert(ssg_contains(sse_resp, "data: tok42") == 1)
+    let mut dirs: vector[string] = []
+    dirs.push("site")
+    ifd := fs_inotify_open(dirs)
+    assert(ifd >= 0)
+    close(ifd)
+    println("  ✓ SSE live-reload & kernel inotify watcher passed.")
+
+fn test_nested_clx_and_named_slots() -> void:
+    println("[Test 16/19] Testing Nested .clx Components, Named Slots & Fallbacks...")
+    lbr := "{"
+    rbr := "}"
+    inner_src := "---\ntag := \"SUB\"\n---\n<span class=\"pill\">" + lbr + "tag" + rbr + ":" + lbr + "label" + rbr + "</span>\n<style scoped>\n.pill " + lbr + " font-weight: bold; " + rbr + "\n</style>"
+    outer_src := "<div class=\"card\"><header><slot name=\"header\" /></header><main><slot /></main><aside><slot name=\"aside\">FallbackAside</slot></aside><footer><Badge label=\"OK\" /></footer></div>"
+    reg := clx_registry_new()
+    c_in := clx_parse_component("Badge", inner_src)
+    c_out := clx_parse_component("Panel", outer_src)
+    reg.by_name["Badge"] = len(reg.components)
+    reg.components.push(c_in)
+    reg.by_name["Panel"] = len(reg.components)
+    reg.components.push(c_out)
+    let mut calls: vector[ClxTagCall] = []
+    calls.push(ClxTagCall("Panel", "<Panel>", "<div slot=\"header\">TopTitle</div><p>MainBody</p>", "<!--CLX_0-->"))
+    out := clx_expand_calls(reg, calls, "<html><head></head><body><!--CLX_0--></body></html>", dict[string, string]())
+    assert(ssg_contains(out, "<header><div slot=\"header\">TopTitle</div></header>") == 1)
+    assert(ssg_contains(out, "<main><p>MainBody</p></main>") == 1)
+    assert(ssg_contains(out, "<aside>FallbackAside</aside>") == 1)
+    assert(ssg_contains(out, "SUB:OK") == 1)
+    assert(ssg_contains(out, c_in.scope_class) == 1)
+    println("  ✓ Nested .clx + named slots + fallbacks passed.")
+
+fn test_deep_json_and_liquid_filters() -> void:
+    println("[Test 17/19] Testing Deep JSON Data & Liquid where/sort/group_by/uniq/slice...")
+    flat := dict[string, string]()
+    counts := dict[string, int]()
+    jraw := "{\"sidebar\":[{\"title\":\"Start\",\"items\":[{\"label\":\"Intro\",\"href\":\"/intro.html\"}]},{\"title\":\"Ref\",\"items\":[{\"label\":\"API\",\"href\":\"/api.html\"}]}]}"
+    _data_parse_simple_json_records("docs", jraw, flat, counts)
+    assert(flat["docs.sidebar[0].items[0].href"] == "/intro.html")
+    assert(flat["docs.sidebar[1].items[0].href"] == "/api.html")
+
+    tr := template_new()
+    ob := "{" + "{"
+    cb := "}" + "}"
+    op := "{" + "%"
+    cp := "%" + "}"
+    template_register_layout(tr, "raw", ob + " content " + cb)
+    tmpl := op + " for s in site.data.docs.sidebar " + cp + "[" + ob + " s.title " + cb + ":" + op + " for it in s.items " + cp + ob + " it.href " + cb + op + " endfor " + cp + "]" + op + " endfor " + cp
+    tmpl = tmpl + "|" + op + " for p in site.posts | where: \"author\", \"Alice\" | sort: \"title\" " + cp + ob + " p.title " + cb + ";" + op + " endfor " + cp
+    tmpl = tmpl + "|" + op + " for g in site.posts | group_by: \"year\" " + cp + "(" + ob + " g.name " + cb + ":" + ob + " g.size " + cb + ")" + op + " endfor " + cp
+    tmpl = tmpl + "|" + ob + " tags_csv | uniq | sort | slice: 0, 2 | join: \"-\" " + cb
+    vars := dict[string, string]()
+    vars["tags_csv"] = "z,a,z,b"
+    let mut items: vector[PageSummary] = []
+    items.push(PageSummary("Zeta", "/z.html", "2025-05-01", "Alice", "", "", "", "posts", "zeta", "", 1, "en", dict[string, string]()))
+    items.push(PageSummary("Alpha", "/a.html", "2026-01-01", "Alice", "", "", "", "posts", "alpha", "", 1, "en", dict[string, string]()))
+    items.push(PageSummary("BobPost", "/b.html", "2026-02-01", "Bob", "", "", "", "posts", "bob", "", 1, "en", dict[string, string]()))
+    let p_idx: vector[int] = [0, 1, 2]
+    ctx := RenderContext(vars, dict[string, string](), items, p_idx, [], [], [], dict[string, int](), dict[string, int](), dict[string, int](), DataRegistry(flat, counts), config_default())
+    out := template_v2_render(tr, "raw", tmpl, vars, ctx)
+    assert(ssg_contains(out, "[Start:/intro.html][Ref:/api.html]") == 1)
+    assert(ssg_contains(out, "Alpha;Zeta;") == 1)
+    assert(ssg_contains(out, "(2025:1)") == 1)
+    assert(ssg_contains(out, "(2026:2)") == 1)
+    assert(ssg_contains(out, "|a-b") == 1)
+    println("  ✓ Deep JSON & Liquid where/sort/group_by/uniq/slice passed.")
+
+fn test_image_dims_and_dyn_routes() -> void:
+    println("[Test 18/19] Testing JPEG/WebP Image Dims, <img> CLS Injection & [slug] Routes...")
+    root := "/tmp/cl_ssg_sprint3_site"
+    fs_remove_rf(root)
+    dcache := dict[string, int]()
+    ssg_ensure_dir(root + "/site/static", dcache)
+    ssg_ensure_dir(root + "/site/posts", dcache)
+    ssg_ensure_dir(root + "/site/pages/cards", dcache)
+    // Build minimal valid JPEG with SOF0 (width=320, height=240)
+    jp_path := root + "/site/static/hero.jpg"
+    jbuf := mem_alloc(22)
+    ptr_write_u8(ptr_add(jbuf, 0), 255); ptr_write_u8(ptr_add(jbuf, 1), 216)
+    ptr_write_u8(ptr_add(jbuf, 2), 255); ptr_write_u8(ptr_add(jbuf, 3), 192)
+    ptr_write_u8(ptr_add(jbuf, 4), 0);   ptr_write_u8(ptr_add(jbuf, 5), 11)
+    ptr_write_u8(ptr_add(jbuf, 6), 8)
+    ptr_write_u8(ptr_add(jbuf, 7), 0);   ptr_write_u8(ptr_add(jbuf, 8), 240)
+    ptr_write_u8(ptr_add(jbuf, 9), 1);   ptr_write_u8(ptr_add(jbuf, 10), 64)
+    ptr_write_u8(ptr_add(jbuf, 11), 3)
+    fd_j := open(str_cstr(jp_path), 577, 420)
+    write(fd_j, jbuf, 12)
+    close(fd_j)
+    mem_free(jbuf)
+    let mut jw: int = 0
+    let mut jh: int = 0
+    assert(assets_probe_image_dims(jp_path, jw, jh) == 1)
+    assert(jw == 320)
+    assert(jh == 240)
+
+    // Minimal WebP VP8X (width=640, height=480 -> width-1=639=0x27F, height-1=479=0x1DF)
+    wp_path := root + "/site/static/pic.webp"
+    wbuf := mem_alloc(30)
+    // RIFF....WEBPVP8X
+    ptr_write_u8(ptr_add(wbuf, 0), 82); ptr_write_u8(ptr_add(wbuf, 1), 73); ptr_write_u8(ptr_add(wbuf, 2), 70); ptr_write_u8(ptr_add(wbuf, 3), 70)
+    ptr_write_u8(ptr_add(wbuf, 8), 87); ptr_write_u8(ptr_add(wbuf, 9), 69); ptr_write_u8(ptr_add(wbuf, 10), 66); ptr_write_u8(ptr_add(wbuf, 11), 80)
+    ptr_write_u8(ptr_add(wbuf, 12), 86); ptr_write_u8(ptr_add(wbuf, 13), 80); ptr_write_u8(ptr_add(wbuf, 14), 56); ptr_write_u8(ptr_add(wbuf, 15), 88)
+    ptr_write_u8(ptr_add(wbuf, 24), 127); ptr_write_u8(ptr_add(wbuf, 25), 2); ptr_write_u8(ptr_add(wbuf, 26), 0)
+    ptr_write_u8(ptr_add(wbuf, 27), 223); ptr_write_u8(ptr_add(wbuf, 28), 1); ptr_write_u8(ptr_add(wbuf, 29), 0)
+    fd_w := open(str_cstr(wp_path), 577, 420)
+    write(fd_w, wbuf, 30)
+    close(fd_w)
+    mem_free(wbuf)
+    let mut ww: int = 0
+    let mut wh: int = 0
+    assert(assets_probe_image_dims(wp_path, ww, wh) == 1)
+    assert(ww == 640)
+    assert(wh == 480)
+
+    // Write post + [slug].clx + img page and build site
+    file_write(root + "/site/posts/2026-11-27-dyn-hello.md", "---\ntitle: Dyn Hello\ndate: 2026-11-27\n---\n![hero](/static/hero.jpg)\n")
+    lbr := "{"
+    rbr := "}"
+    file_write(root + "/site/pages/cards/[slug].clx", "<div class=\"dyn\">" + lbr + "title" + rbr + "</div>\n")
+    file_write(root + "/site/pages/gallery.md", "---\ntitle: Gallery\n---\n<img src=\"/static/pic.webp\" alt=\"p\" />\n")
+    cfg := config_default()
+    cfg.site_dir = root + "/site"
+    cfg.dist_dir = root + "/dist"
+    cfg.clean_dist = 1
+    rep := builder_run_all(cfg)
+    assert(rep.pages_built >= 3)
+    assert(file_exists(root + "/dist/cards/dyn-hello.html") == 1)
+    assert(ssg_contains(file_read(root + "/dist/cards/dyn-hello.html"), "Dyn Hello") == 1)
+    assert(ssg_contains(file_read(root + "/dist/gallery.html"), "width=\"640\" height=\"480\"") == 1)
+    fs_remove_rf(root)
+    println("  ✓ JPEG/WebP dims, <img> CLS injection & [slug] dynamic routes passed.")
+
+fn test_wasm_island_e2e() -> void:
+    println("[Test 19/19] Testing End-to-End .cl -> wasm32 Island Compilation & Hydration...")
+    root := "/tmp/cl_ssg_wasm_test"
+    fs_remove_rf(root)
+    dcache := dict[string, int]()
+    ssg_ensure_dir(root + "/site/islands", dcache)
+    file_write(root + "/site/islands/CalcWasm.cl", "fn main() -> int:\n    return 77\n")
+    reg := islands_registry_new()
+    islands_discover_custom(reg, root + "/site", root + "/dist", 1, dcache)
+    assert(reg.by_name.has("CalcWasm") == 1)
+    def := reg.definitions[reg.by_name["CalcWasm"]]
+    wasm_path := root + "/dist/static/islands/CalcWasm.wasm"
+    assert(file_exists(wasm_path) == 1)
+    assert(def.wasm_out_url == "/static/islands/CalcWasm.wasm")
+    raw_w := file_read(wasm_path)
+    assert(string_length(raw_w) >= 8)
+    assert(byte_at(raw_w, 0) == 0 and byte_at(raw_w, 1) == 97 and byte_at(raw_w, 2) == 115 and byte_at(raw_w, 3) == 109)
+    let mut tags: vector[IslandTag] = []
+    tags.push(IslandTag("CalcWasm", "load", "", ""))
+    hyd := islands_hydrate_v2(reg, tags, "<html><body><div class=\"cluster-island-placeholder\" id=\"island-calcwasm-1\" data-island=\"CalcWasm\" data-directive=\"load\">\n  <span>[Interactive Island: CalcWasm]</span>\n</div></body></html>", 0)
+    assert(ssg_contains(hyd, "/static/islands/CalcWasm.wasm") == 1)
+    fs_remove_rf(root)
+    println("  ✓ End-to-end .cl -> wasm32 island compilation & hydration passed.")
+
 fn main() -> int:
     println("=================================================================")
-    println("      Cluster-SSG v2.0: Automated Production Test Suite (14)     ")
+    println("      Cluster-SSG v2.0: Automated Production Test Suite (19)     ")
     println("=================================================================")
 
     test_cld_parser()
@@ -262,8 +424,13 @@ fn main() -> int:
     test_clx_component_compiler()
     test_islands_v2_directives()
     test_asset_minifiers()
+    test_sse_and_inotify()
+    test_nested_clx_and_named_slots()
+    test_deep_json_and_liquid_filters()
+    test_image_dims_and_dyn_routes()
+    test_wasm_island_e2e()
 
     println("\n=================================================================")
-    println("      ✓ ALL 14 TEST SUITES PASSED WITH EXIT CODE 0!              ")
+    println("      ✓ ALL 19 TEST SUITES PASSED WITH EXIT CODE 0!              ")
     println("=================================================================")
     return 0

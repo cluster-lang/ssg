@@ -34,6 +34,12 @@ model BuildReport:
     skipped_incremental: int
     schema_errors: int
 
+model SsgDynRoute:
+    abs_path: string
+    rel_path: string
+    collection: string
+    is_clx: int
+
 fn builder_init_templates(cfg: SsgConfig) -> TemplateRegistry:
     tr := template_new()
     ob := "{" + "{"
@@ -127,7 +133,7 @@ fn _builder_inject_seo(html: string, cfg: SsgConfig, title: string, desc: string
     sb_free(sb)
     return ssg_replace_all(html, "</head>", inj)
 
-fn _builder_render_single_doc(doc: SsgRichDoc, cfg: SsgConfig, tr: TemplateRegistry, clx_reg: ClxRegistry, islands: IslandRegistry, asset_man: AssetManifest, ctx: RenderContext, total_chapters: int, alt_langs_html: string) -> int:
+fn _builder_render_single_doc(doc: SsgRichDoc, cfg: SsgConfig, tr: TemplateRegistry, clx_reg: ClxRegistry, islands: IslandRegistry, asset_man: AssetManifest, ctx: RenderContext, total_chapters: int, alt_langs_html: string, zcodec: ZlibCodec) -> int:
     let mut written: int = 0
     arena:
         let mut body: string = doc.md.html
@@ -170,18 +176,19 @@ fn _builder_render_single_doc(doc: SsgRichDoc, cfg: SsgConfig, tr: TemplateRegis
         // Expand Astro-style .clx components in body
         body = clx_expand_calls(clx_reg, doc.md.clx_calls, body, vars)
 
-        let mut html: string = template_v2_render(tr, doc.layout, body, vars, ctx)
+        let mut html: string = template_v2_render_owned(tr, doc.layout, body, vars, ctx)
         html = islands_hydrate_v2(islands, doc.md.islands, html, cfg.view_transitions)
         html = _builder_inject_seo(html, cfg, doc.title, doc.description, doc.permalink_url, alt_langs_html)
         html = assets_rewrite_html_urls(html, asset_man)
         if cfg.minify == 1:
             html = assets_minify_html(html)
 
-        file_write(doc.out_file_path, html)
+        ssg_write_file_raw(doc.out_file_path, html)
         written = string_length(html)
 
         if cfg.compress == 1:
-            sys_run("gzip -kf -9 \"" + doc.out_file_path + "\" 2>/dev/null || true")
+            if ssg_gzip_write(zcodec, doc.out_file_path + ".gz", html) != 0:
+                sys_run("gzip -kf -9 \"" + doc.out_file_path + "\" 2>/dev/null || true")
 
         if cfg.output_binary == 1:
             packed := ssg_rich_to_binary(doc)
@@ -193,19 +200,54 @@ fn _builder_render_single_doc(doc: SsgRichDoc, cfg: SsgConfig, tr: TemplateRegis
 
     return written
 
+fn _builder_render_clx_source(src: SsgPageSource, cfg: SsgConfig, tr: TemplateRegistry, asset_man: AssetManifest, ctx: RenderContext, alt_langs_html: string, zcodec: ZlibCodec) -> int:
+    let mut written: int = 0
+    arena:
+        comp := clx_parse_component(ssg_path_stem(src.abs_path), file_read(src.abs_path))
+        env := dict[string, string]()
+        _clx_eval_frontmatter_vars(comp.script_src, env)
+        let mut body_html: string = comp.template_html
+        eks := env.keys()
+        let mut ki: int = 0
+        while ki < len(eks):
+            body_html = ssg_replace_all(body_html, "{" + eks[ki] + "}", env[eks[ki]])
+            ki = ki + 1
+        if string_length(comp.scoped_css) > 0:
+            body_html = "<div class=\"" + comp.scope_class + "\"><style>" + comp.scoped_css + "</style>" + body_html + "</div>"
+        let mut title: string = comp.name
+        if env.has("title") == 1: title = env["title"]
+        let mut layout: string = "default"
+        if env.has("layout") == 1: layout = env["layout"]
+        slug := ssg_slugify(ssg_path_stem(src.rel_path))
+        env["title"] = title
+        env["slug"] = slug
+        env["url"] = src.permalink_url
+        let mut html: string = template_v2_render_owned(tr, layout, body_html, env, ctx)
+        html = _builder_inject_seo(html, cfg, title, "", src.permalink_url, alt_langs_html)
+        html = assets_rewrite_html_urls(html, asset_man)
+        if cfg.minify == 1:
+            html = assets_minify_html(html)
+        ssg_write_file_raw(src.out_file_path, html)
+        written = string_length(html)
+        if cfg.compress == 1:
+            if ssg_gzip_write(zcodec, src.out_file_path + ".gz", html) != 0:
+                sys_run("gzip -kf -9 \"" + src.out_file_path + "\" 2>/dev/null || true")
+    return written
+
+fn _builder_render_source(src: SsgPageSource, cfg: SsgConfig, tr: TemplateRegistry, clx_reg: ClxRegistry, islands: IslandRegistry, asset_man: AssetManifest, ctx: RenderContext, total_chapters: int, alt_langs_html: string, zcodec: ZlibCodec) -> int:
+    if src.is_clx == 1:
+        return _builder_render_clx_source(src, cfg, tr, asset_man, ctx, alt_langs_html, zcodec)
+    let mut wb: int = 0
+    arena:
+        doc := ssg_parse_rich_doc(src.abs_path, src.rel_path, src.collection)
+        doc.permalink_url = src.permalink_url
+        doc.out_file_path = src.out_file_path
+        wb = _builder_render_single_doc(doc, cfg, tr, clx_reg, islands, asset_man, ctx, total_chapters, alt_langs_html, zcodec)
+    return wb
+
 fn _builder_str_lt(a: string, b: string) -> int:
-    la := string_length(a)
-    lb := string_length(b)
-    let mut lim: int = la
-    if lb < lim: lim = lb
-    let mut i: int = 0
-    while i < lim:
-        ba := byte_at(a, i)
-        bb := byte_at(b, i)
-        if ba < bb: return 1
-        if ba > bb: return 0
-        i = i + 1
-    if la < lb: return 1
+    if a < b:
+        return 1
     return 0
 
 fn _builder_sort_indices_by_date_desc(indices: vector[int], items: vector[PageSummary]) -> void:
@@ -216,20 +258,231 @@ fn _builder_sort_indices_by_date_desc(indices: vector[int], items: vector[PageSu
         key_date := items[key_idx].date
         let mut j: int = i - 1
         while j >= 0:
-            if _builder_str_lt(items[indices[j]].date, key_date) == 0:
+            if items[indices[j]].date >= key_date:
                 break
             indices[j + 1] = indices[j]
             j = j - 1
         indices[j + 1] = key_idx
         i = i + 1
 
-fn _builder_discover_docs(cfg: SsgConfig, dir_cache: dict[string, int]) -> vector[SsgRichDoc]:
+fn _pack_push(sb: StrBuf, lens: vector[int], s: string) -> void:
+    sl := string_length(s)
+    lens.push(sl)
+    if sl > 0:
+        sb_append(sb, s)
+
+fn _pack_pop(sb: StrBuf, lens: vector[int], &idx: int, &off: int) -> string:
+    sl := lens[idx]
+    idx = idx + 1
+    if sl <= 0:
+        return ""
+    p: ptr := int_to_ptr(arena_alloc(sl + 1))
+    mem_copy(p, ptr_add(sb.buf, off), sl)
+    ptr_write_u8(ptr_add(p, sl), 0)
+    off = off + sl
+    return str_from_parts(p, sl)
+
+fn _builder_scan_and_record(
+    ap: string,
+    rel: string,
+    col: string,
+    is_clx: int,
+    cfg: SsgConfig,
+    dir_cache: dict[string, int],
+    schema_reg: SchemaRegistry,
+    sources: vector[SsgPageSource],
+    items: vector[PageSummary],
+    post_indices: vector[int],
+    page_indices: vector[int],
+    index_pools: vector[vector[int]],
+    col_indices: dict[string, int],
+    tag_indices: dict[string, int],
+    cat_indices: dict[string, int],
+    schema_errors: vector[string],
+    &total_chapters: int
+) -> void:
+    pack_sb := sb_new_cap(1024)
+    let mut pack_lens: vector[int] = []
+    let mut keep_entry: int = 1
+    let mut rt_min: int = 1
+    let mut n_meta: int = 0
+    let mut n_errs: int = 0
+
+    arena:
+        if is_clx == 1:
+            comp := clx_parse_component(ssg_path_stem(ap), file_read(ap))
+            env := dict[string, string]()
+            _clx_eval_frontmatter_vars(comp.script_src, env)
+            let mut title: string = comp.name
+            if env.has("title") == 1: title = env["title"]
+            slug := ssg_slugify(ssg_path_stem(rel))
+            url := "/" + slug + ".html"
+            outp := ssg_url_to_dist_path(cfg.dist_dir, url)
+
+            _pack_push(pack_sb, pack_lens, ap)
+            _pack_push(pack_sb, pack_lens, rel)
+            _pack_push(pack_sb, pack_lens, "pages")
+            _pack_push(pack_sb, pack_lens, url)
+            _pack_push(pack_sb, pack_lens, outp)
+            _pack_push(pack_sb, pack_lens, title)
+            _pack_push(pack_sb, pack_lens, "")
+            _pack_push(pack_sb, pack_lens, "")
+            _pack_push(pack_sb, pack_lens, "")
+            _pack_push(pack_sb, pack_lens, "")
+            _pack_push(pack_sb, pack_lens, "")
+            _pack_push(pack_sb, pack_lens, slug)
+            _pack_push(pack_sb, pack_lens, "")
+            _pack_push(pack_sb, pack_lens, "")
+        else:
+            hdr := ssg_scan_page_header(ap, rel, col, cfg.permalink, cfg.dist_dir)
+            if hdr.is_draft == 1 and cfg.include_drafts == 0:
+                keep_entry = 0
+            else:
+                let mut local_errs: vector[string] = []
+                collections_validate_header(schema_reg, hdr, local_errs)
+                rt_min = hdr.reading_time_min
+
+                _pack_push(pack_sb, pack_lens, hdr.source.abs_path)
+                _pack_push(pack_sb, pack_lens, hdr.source.rel_path)
+                _pack_push(pack_sb, pack_lens, hdr.source.collection)
+                _pack_push(pack_sb, pack_lens, hdr.source.permalink_url)
+                _pack_push(pack_sb, pack_lens, hdr.source.out_file_path)
+                _pack_push(pack_sb, pack_lens, hdr.title)
+                _pack_push(pack_sb, pack_lens, hdr.date)
+                _pack_push(pack_sb, pack_lens, hdr.author)
+                _pack_push(pack_sb, pack_lens, hdr.description)
+                _pack_push(pack_sb, pack_lens, hdr.tags)
+                _pack_push(pack_sb, pack_lens, hdr.categories)
+                _pack_push(pack_sb, pack_lens, hdr.slug)
+                _pack_push(pack_sb, pack_lens, hdr.plain_excerpt)
+                _pack_push(pack_sb, pack_lens, hdr.lang)
+
+                fks := hdr.fm_fields.keys()
+                n_meta = len(fks)
+                let mut fki: int = 0
+                while fki < n_meta:
+                    fk := fks[fki]
+                    _pack_push(pack_sb, pack_lens, fk)
+                    _pack_push(pack_sb, pack_lens, hdr.fm_fields[fk])
+                    fki = fki + 1
+
+                n_errs = len(local_errs)
+                let mut lei: int = 0
+                while lei < n_errs:
+                    _pack_push(pack_sb, pack_lens, local_errs[lei])
+                    lei = lei + 1
+
+    if keep_entry == 0:
+        sb_free(pack_sb)
+        return
+
+    let mut pidx: int = 0
+    let mut poff: int = 0
+    p_ap := _pack_pop(pack_sb, pack_lens, pidx, poff)
+    p_rel := _pack_pop(pack_sb, pack_lens, pidx, poff)
+    p_col := _pack_pop(pack_sb, pack_lens, pidx, poff)
+    p_url := _pack_pop(pack_sb, pack_lens, pidx, poff)
+    p_outp := _pack_pop(pack_sb, pack_lens, pidx, poff)
+    p_title := _pack_pop(pack_sb, pack_lens, pidx, poff)
+    p_date := _pack_pop(pack_sb, pack_lens, pidx, poff)
+    p_author := _pack_pop(pack_sb, pack_lens, pidx, poff)
+    p_desc := _pack_pop(pack_sb, pack_lens, pidx, poff)
+    p_tags := _pack_pop(pack_sb, pack_lens, pidx, poff)
+    p_cats := _pack_pop(pack_sb, pack_lens, pidx, poff)
+    p_slug := _pack_pop(pack_sb, pack_lens, pidx, poff)
+    p_excerpt := _pack_pop(pack_sb, pack_lens, pidx, poff)
+    p_lang := _pack_pop(pack_sb, pack_lens, pidx, poff)
+
+    sum_meta := dict[string, string]()
+    let mut mi: int = 0
+    while mi < n_meta:
+        mk := _pack_pop(pack_sb, pack_lens, pidx, poff)
+        mv := _pack_pop(pack_sb, pack_lens, pidx, poff)
+        sum_meta[mk] = mv
+        mi = mi + 1
+
+    let mut ei: int = 0
+    while ei < n_errs:
+        schema_errors.push(_pack_pop(pack_sb, pack_lens, pidx, poff))
+        ei = ei + 1
+
+    sb_free(pack_sb)
+
+    out_src := SsgPageSource(p_ap, p_rel, p_col, p_url, p_outp, is_clx)
+    out_sum := PageSummary(p_title, p_url, p_date, p_author, p_desc, p_tags, p_cats, p_col, p_slug, p_excerpt, rt_min, p_lang, sum_meta)
+
+    ch_n := _builder_extract_chapter_num(out_sum.slug)
+    if ch_n > total_chapters:
+        total_chapters = ch_n
+
+    ssg_ensure_dir(ssg_path_dirname(out_src.out_file_path), dir_cache)
+
+    di := len(items)
+    items.push(out_sum)
+    sources.push(out_src)
+
+    if out_src.collection == "posts":
+        post_indices.push(di)
+    else:
+        page_indices.push(di)
+
+    if col_indices.has(out_src.collection) == 0:
+        let cnew: vector[int] = []
+        col_indices[out_src.collection] = len(index_pools)
+        index_pools.push(cnew)
+    c_slot := col_indices[out_src.collection]
+    cvec := index_pools[c_slot]
+    cvec.push(di)
+    index_pools[c_slot] = cvec
+
+    _builder_add_csv_index(out_sum.tags, di, index_pools, tag_indices)
+    _builder_add_csv_index(out_sum.categories, di, index_pools, cat_indices)
+
+fn _builder_add_csv_index(csv_str: string, di: int, index_pools: vector[vector[int]], idx_map: dict[string, int]) -> void:
+    slen := string_length(csv_str)
+    if slen <= 0:
+        return
+    let mut start: int = 0
+    while start <= slen:
+        comma := ssg_find_from(csv_str, ",", start)
+        let mut end_p: int = slen
+        if comma >= 0:
+            end_p = comma
+        tok := ssg_slugify(ssg_trim(substring(csv_str, start, end_p - start)))
+        if string_length(tok) > 0 and tok != "untitled":
+            if idx_map.has(tok) == 0:
+                let nvec: vector[int] = []
+                idx_map[tok] = len(index_pools)
+                index_pools.push(nvec)
+            slot := idx_map[tok]
+            pvec := index_pools[slot]
+            pvec.push(di)
+            index_pools[slot] = pvec
+        if comma < 0:
+            break
+        start = comma + 1
+
+fn _builder_scan_sources_streaming(
+    cfg: SsgConfig,
+    dir_cache: dict[string, int],
+    schema_reg: SchemaRegistry,
+    items: vector[PageSummary],
+    post_indices: vector[int],
+    page_indices: vector[int],
+    index_pools: vector[vector[int]],
+    col_indices: dict[string, int],
+    tag_indices: dict[string, int],
+    cat_indices: dict[string, int],
+    schema_errors: vector[string],
+    dyn_routes: vector[SsgDynRoute],
+    &total_chapters: int
+) -> vector[SsgPageSource]:
     let mut exts: vector[string] = []
     exts.push(".cld")
     exts.push(".md")
     exts.push(".markdown")
 
-    let mut docs: vector[SsgRichDoc] = []
+    let mut sources: vector[SsgPageSource] = []
     seen_paths := dict[string, int]()
 
     // 1. Scan pages/
@@ -247,11 +500,10 @@ fn _builder_discover_docs(cfg: SsgConfig, dir_cache: dict[string, int]) -> vecto
                 rel := scan.rel_paths[i]
                 if seen_paths.has(ap) == 0:
                     seen_paths[ap] = 1
-                    doc := ssg_parse_rich_doc(ap, rel, "pages")
-                    if doc.is_draft == 0 or cfg.include_drafts == 1:
-                        doc.permalink_url = ssg_resolve_permalink(cfg.permalink, doc)
-                        doc.out_file_path = ssg_url_to_dist_path(cfg.dist_dir, doc.permalink_url)
-                        docs.push(doc)
+                    if ssg_contains(rel, "[slug]") == 1:
+                        dyn_routes.push(SsgDynRoute(ap, rel, "pages", 0))
+                    else:
+                        _builder_scan_and_record(ap, rel, "pages", 0, cfg, dir_cache, schema_reg, sources, items, post_indices, page_indices, index_pools, col_indices, tag_indices, cat_indices, schema_errors, total_chapters)
                 i = i + 1
         pdi = pdi + 1
 
@@ -271,11 +523,10 @@ fn _builder_discover_docs(cfg: SsgConfig, dir_cache: dict[string, int]) -> vecto
                 rel := scan.rel_paths[i]
                 if seen_paths.has(ap) == 0:
                     seen_paths[ap] = 1
-                    doc := ssg_parse_rich_doc(ap, rel, "posts")
-                    if doc.is_draft == 0 or cfg.include_drafts == 1:
-                        doc.permalink_url = ssg_resolve_permalink(cfg.permalink, doc)
-                        doc.out_file_path = ssg_url_to_dist_path(cfg.dist_dir, doc.permalink_url)
-                        docs.push(doc)
+                    if ssg_contains(rel, "[slug]") == 1:
+                        dyn_routes.push(SsgDynRoute(ap, rel, "posts", 0))
+                    else:
+                        _builder_scan_and_record(ap, rel, "posts", 0, cfg, dir_cache, schema_reg, sources, items, post_indices, page_indices, index_pools, col_indices, tag_indices, cat_indices, schema_errors, total_chapters)
                 i = i + 1
         pti = pti + 1
 
@@ -301,11 +552,10 @@ fn _builder_discover_docs(cfg: SsgConfig, dir_cache: dict[string, int]) -> vecto
                             rel := scan.rel_paths[i]
                             if seen_paths.has(ap) == 0:
                                 seen_paths[ap] = 1
-                                doc := ssg_parse_rich_doc(ap, rel, col)
-                                if doc.is_draft == 0 or cfg.include_drafts == 1:
-                                    doc.permalink_url = "/" + col + "/" + doc.slug + ".html"
-                                    doc.out_file_path = ssg_url_to_dist_path(cfg.dist_dir, doc.permalink_url)
-                                    docs.push(doc)
+                                if ssg_contains(rel, "[slug]") == 1:
+                                    dyn_routes.push(SsgDynRoute(ap, rel, col, 0))
+                                else:
+                                    _builder_scan_and_record(ap, rel, col, 0, cfg, dir_cache, schema_reg, sources, items, post_indices, page_indices, index_pools, col_indices, tag_indices, cat_indices, schema_errors, total_chapters)
                             i = i + 1
                 si = si + 1
         cdi = cdi + 1
@@ -320,52 +570,166 @@ fn _builder_discover_docs(cfg: SsgConfig, dir_cache: dict[string, int]) -> vecto
         while i < len(scan.abs_paths):
             ap := scan.abs_paths[i]
             rel := scan.rel_paths[i]
-            comp := clx_parse_component(ssg_path_stem(ap), file_read(ap))
-            env := dict[string, string]()
-            _clx_eval_frontmatter_vars(comp.script_src, env)
-            let mut body_html: string = comp.template_html
-            eks := env.keys()
-            let mut ki: int = 0
-            while ki < len(eks):
-                body_html = ssg_replace_all(body_html, "{" + eks[ki] + "}", env[eks[ki]])
-                ki = ki + 1
-            if string_length(comp.scoped_css) > 0:
-                body_html = "<div class=\"" + comp.scope_class + "\"><style>" + comp.scoped_css + "</style>" + body_html + "</div>"
-            let empty_fm := fm_new_empty("")
-            let empty_toc: vector[TocEntry] = []
-            let empty_isl: vector[IslandTag] = []
-            let empty_clx: vector[ClxTagCall] = []
-            md_r := MarkdownResult(body_html, empty_toc, empty_isl, empty_clx, 10, "")
-            let mut title: string = comp.name
-            if env.has("title") == 1: title = env["title"]
-            let mut layout: string = "default"
-            if env.has("layout") == 1: layout = env["layout"]
-            slug := ssg_slugify(ssg_path_stem(rel))
-            url := "/" + slug + ".html"
-            outp := ssg_url_to_dist_path(cfg.dist_dir, url)
-            docs.push(SsgRichDoc(ap, rel, "pages", empty_fm, md_r, title, "", "", layout, "", "", slug, "", url, outp, "", 0, 1))
+            if ssg_contains(rel, "[slug]") == 1:
+                dyn_routes.push(SsgDynRoute(ap, rel, "pages", 1))
+            else:
+                _builder_scan_and_record(ap, rel, "pages", 1, cfg, dir_cache, schema_reg, sources, items, post_indices, page_indices, index_pools, col_indices, tag_indices, cat_indices, schema_errors, total_chapters)
             i = i + 1
 
-    return docs
+    return sources
 
-fn _builder_worker_chunk(docs: vector[SsgRichDoc], s_idx: int, e_idx: int, cfg: SsgConfig, tr: TemplateRegistry, clx_reg: ClxRegistry, islands: IslandRegistry, asset_man: AssetManifest, ctx: RenderContext, total_chapters: int, alt_langs_html: string, ch_cnt: Channel[int], ch_b: Channel[int]) -> void:
+fn _builder_expand_dyn_routes(
+    dyn_routes: vector[SsgDynRoute],
+    cfg: SsgConfig,
+    dir_cache: dict[string, int],
+    tr: TemplateRegistry,
+    clx_reg: ClxRegistry,
+    islands: IslandRegistry,
+    asset_man: AssetManifest,
+    ctx: RenderContext,
+    items: vector[PageSummary],
+    post_indices: vector[int],
+    index_pools: vector[vector[int]],
+    col_indices: dict[string, int],
+    total_chapters: int,
+    alt_langs_html: string,
+    zcodec: ZlibCodec,
+    &pages_built: int,
+    &total_bytes: int
+) -> void:
+    let mut di: int = 0
+    while di < len(dyn_routes):
+        dr := dyn_routes[di]
+        // Choose target items: posts for blog/[slug], or matching collection folder, else all items
+        let mut target_pool: vector[int] = []
+        rel_dir := ssg_path_dirname(dr.rel_path)
+        if dr.collection == "posts" or rel_dir == "blog" or rel_dir == "posts":
+            target_pool = post_indices
+        elif string_length(rel_dir) > 0 and col_indices.has(rel_dir) == 1:
+            target_pool = index_pools[col_indices[rel_dir]]
+        elif col_indices.has(dr.collection) == 1 and dr.collection != "pages":
+            target_pool = index_pools[col_indices[dr.collection]]
+        else:
+            let mut ai: int = 0
+            while ai < len(items):
+                target_pool.push(ai)
+                ai = ai + 1
+
+        raw_tmpl := ssg_read_file_arena(dr.abs_path)
+        let mut ti: int = 0
+        while ti < len(target_pool):
+            arena:
+                p := items[target_pool[ti]]
+                let mut gen_rel: string = ssg_replace_all(dr.rel_path, "[slug]", p.slug)
+                if ssg_ends_with(gen_rel, ".clx") == 1:
+                    gen_rel = substring(gen_rel, 0, string_length(gen_rel) - 4) + ".html"
+                elif ssg_ends_with(gen_rel, ".md") == 1:
+                    gen_rel = substring(gen_rel, 0, string_length(gen_rel) - 3) + ".html"
+                elif ssg_ends_with(gen_rel, ".cld") == 1:
+                    gen_rel = substring(gen_rel, 0, string_length(gen_rel) - 4) + ".html"
+                elif ssg_ends_with(gen_rel, ".markdown") == 1:
+                    gen_rel = substring(gen_rel, 0, string_length(gen_rel) - 9) + ".html"
+                gen_url := "/" + gen_rel
+                out_p := ssg_url_to_dist_path(cfg.dist_dir, gen_url)
+                ssg_ensure_dir(ssg_path_dirname(out_p), dir_cache)
+
+                vars := dict[string, string]()
+                vars["title"] = p.title
+                vars["url"] = gen_url
+                vars["item.url"] = p.url
+                vars["date"] = p.date
+                vars["author"] = p.author
+                vars["description"] = p.description
+                vars["tags"] = p.tags
+                vars["categories"] = p.categories
+                vars["collection"] = p.collection
+                vars["slug"] = p.slug
+                vars["excerpt"] = p.excerpt
+                vars["reading_time"] = str(p.reading_time)
+                vars["lang"] = p.lang
+
+                let mut html: string = ""
+                if dr.is_clx == 1:
+                    comp := clx_parse_component(ssg_path_stem(dr.abs_path), raw_tmpl)
+                    _clx_eval_frontmatter_vars(comp.script_src, vars)
+                    let mut body_html: string = comp.template_html
+                    eks := vars.keys()
+                    let mut ki: int = 0
+                    while ki < len(eks):
+                        body_html = ssg_replace_all(body_html, "{" + eks[ki] + "}", ssg_escape_html(vars[eks[ki]]))
+                        ki = ki + 1
+                    if string_length(comp.scoped_css) > 0:
+                        body_html = "<div class=\"" + comp.scope_class + "\"><style>" + comp.scoped_css + "</style>" + body_html + "</div>"
+                    let mut layout: string = "default"
+                    if vars.has("layout") == 1: layout = vars["layout"]
+                    html = template_v2_render_owned(tr, layout, body_html, vars, ctx)
+                else:
+                    fm := fm_parse_document(raw_tmpl)
+                    let mut lay: string = "default"
+                    if fm.fields.has("layout") == 1: lay = fm.fields["layout"]
+                    md := md_parse_and_render(fm.body)
+                    body := clx_expand_calls(clx_reg, md.clx_calls, md.html, vars)
+                    html = template_v2_render_owned(tr, lay, body, vars, ctx)
+                    html = islands_hydrate_v2(islands, md.islands, html, cfg.view_transitions)
+
+                html = _builder_inject_seo(html, cfg, p.title, p.description, gen_url, alt_langs_html)
+                html = assets_rewrite_html_urls(html, asset_man)
+                if cfg.minify == 1:
+                    html = assets_minify_html(html)
+                ssg_write_file_raw(out_p, html)
+                total_bytes = total_bytes + string_length(html)
+                pages_built = pages_built + 1
+                if cfg.compress == 1:
+                    if ssg_gzip_write(zcodec, out_p + ".gz", html) != 0:
+                        sys_run("gzip -kf -9 \"" + out_p + "\" 2>/dev/null || true")
+            ti = ti + 1
+        di = di + 1
+
+fn _builder_stream_worker(
+    sources: vector[SsgPageSource],
+    s_idx: int,
+    e_idx: int,
+    cfg: SsgConfig,
+    tr: TemplateRegistry,
+    clx_reg: ClxRegistry,
+    islands: IslandRegistry,
+    asset_man: AssetManifest,
+    ctx: RenderContext,
+    total_chapters: int,
+    alt_langs_html: string,
+    zcodec: ZlibCodec,
+    ch_pages: Channel[int],
+    ch_posts: Channel[int],
+    ch_bins: Channel[int],
+    ch_bytes: Channel[int]
+) -> void:
     let mut cnt: int = 0
+    let mut posts: int = 0
+    let mut bins: int = 0
     let mut wb: int = 0
     let mut k: int = s_idx
     while k < e_idx:
-        b := _builder_render_single_doc(docs[k], cfg, tr, clx_reg, islands, asset_man, ctx, total_chapters, alt_langs_html)
+        src := sources[k]
+        b := _builder_render_source(src, cfg, tr, clx_reg, islands, asset_man, ctx, total_chapters, alt_langs_html, zcodec)
         wb = wb + b
         cnt = cnt + 1
+        if src.collection == "posts":
+            posts = posts + 1
+        if cfg.output_binary == 1 and src.is_clx == 0:
+            bins = bins + 1
         k = k + 1
-    ch_cnt.send(cnt)
-    ch_b.send(wb)
+    ch_pages.send(cnt)
+    ch_posts.send(posts)
+    ch_bins.send(bins)
+    ch_bytes.send(wb)
 
 fn builder_run_all(cfg: SsgConfig) -> BuildReport:
     t0 := ssg_clock_us()
     dir_cache := dict[string, int]()
+    zcodec := ssg_zlib_init()
 
     if cfg.clean_dist == 1 and fs_is_dir(cfg.dist_dir) == 1:
-        sys_run("rm -rf \"" + cfg.dist_dir + "\"")
+        fs_remove_rf(cfg.dist_dir)
 
     ssg_ensure_dir(cfg.dist_dir, dir_cache)
     ssg_ensure_dir(ssg_path_join(cfg.dist_dir, "api"), dir_cache)
@@ -379,8 +743,7 @@ fn builder_run_all(cfg: SsgConfig) -> BuildReport:
     islands_discover_custom(islands, cfg.site_dir, cfg.dist_dir, cfg.wasm_islands, dir_cache)
     asset_man := assets_process_all(cfg.site_dir, cfg.dist_dir, cfg.minify, cfg.hash_assets, cfg.compress, dir_cache)
 
-    // 2. Stage 1 Discovery & Schema Validation
-    docs := _builder_discover_docs(cfg, dir_cache)
+    // 2. Stage 1 Streaming Metadata Discovery & Schema Validation (per-file arena rewind)
     let mut schema_errors: vector[string] = []
     let mut items: vector[PageSummary] = []
     let mut post_indices: vector[int] = []
@@ -390,71 +753,10 @@ fn builder_run_all(cfg: SsgConfig) -> BuildReport:
     col_indices := dict[string, int]()
     tag_indices := dict[string, int]()
     cat_indices := dict[string, int]()
+    let mut dyn_routes: vector[SsgDynRoute] = []
     let mut total_chapters: int = 0
 
-    let mut di: int = 0
-    while di < len(docs):
-        doc := docs[di]
-        collections_validate_doc(schema_reg, doc, schema_errors)
-
-        ch_n := _builder_extract_chapter_num(doc.slug)
-        if ch_n > total_chapters:
-            total_chapters = ch_n
-
-        ssg_ensure_dir(ssg_path_dirname(doc.out_file_path), dir_cache)
-
-        summary := PageSummary(doc.title, doc.permalink_url, doc.date, doc.author, doc.description, doc.tags, doc.categories, doc.collection, doc.slug, doc.md.plain_excerpt, doc.reading_time_min, doc.lang, doc.fm.fields)
-        items.push(summary)
-
-        if doc.collection == "posts":
-            post_indices.push(di)
-        else:
-            page_indices.push(di)
-
-        // Collection index
-        if col_indices.has(doc.collection) == 0:
-            let cnew: vector[int] = []
-            col_indices[doc.collection] = len(index_pools)
-            index_pools.push(cnew)
-        c_slot := col_indices[doc.collection]
-        cvec := index_pools[c_slot]
-        cvec.push(di)
-        index_pools[c_slot] = cvec
-
-        // Tags index
-        if string_length(doc.tags) > 0:
-            tparts := ssg_split(doc.tags, ",")
-            let mut ti: int = 0
-            while ti < len(tparts):
-                tg := ssg_slugify(ssg_trim(tparts[ti]))
-                if string_length(tg) > 0 and tg != "untitled":
-                    if tag_indices.has(tg) == 0:
-                        let tnew: vector[int] = []
-                        tag_indices[tg] = len(index_pools)
-                        index_pools.push(tnew)
-                    t_slot := tag_indices[tg]
-                    tvec := index_pools[t_slot]
-                    tvec.push(di)
-                    index_pools[t_slot] = tvec
-                ti = ti + 1
-
-        // Categories index
-        if string_length(doc.categories) > 0:
-            cparts := ssg_split(doc.categories, ",")
-            let mut ci: int = 0
-            while ci < len(cparts):
-                cg := ssg_slugify(ssg_trim(cparts[ci]))
-                if string_length(cg) > 0 and cg != "untitled":
-                    if cat_indices.has(cg) == 0:
-                        let gnew: vector[int] = []
-                        cat_indices[cg] = len(index_pools)
-                        index_pools.push(gnew)
-                    g_slot := cat_indices[cg]
-                    gvec := index_pools[g_slot]
-                    gvec.push(di)
-                    index_pools[g_slot] = gvec
-                ci = ci + 1
-        di = di + 1
+    sources := _builder_scan_sources_streaming(cfg, dir_cache, schema_reg, items, post_indices, page_indices, index_pools, col_indices, tag_indices, cat_indices, schema_errors, dyn_routes, total_chapters)
 
     if len(schema_errors) > 0:
         let mut ei: int = 0
@@ -489,32 +791,55 @@ fn builder_run_all(cfg: SsgConfig) -> BuildReport:
     base_lists := dict[string, string]()
     ctx := RenderContext(base_vars, base_lists, items, post_indices, page_indices, pgn_indices, index_pools, col_indices, tag_indices, cat_indices, data_reg, cfg)
 
-    // 3. Stage 2 Page & Post Compilation (Parallel multi-core when batch >= 64 and non-incremental)
+    // 3. Stage 2 Streaming Page & Post Compilation (Parallel TLS-arena workers when batch >= 32 and non-incremental)
     let mut pages_built: int = 0
     let mut posts_built: int = 0
     let mut total_bins: int = 0
     let mut total_bytes: int = asset_man.bytes_written
     let mut skipped_inc: int = 0
 
-    let n_docs: int = len(docs)
-    if 0 == 1:
-        // Reserved for thread-local arena parallel worker pool
-        pages_built = 0
+    let n_docs: int = len(sources)
+    let mut n_workers: int = cfg.threads
+    if n_workers <= 0: n_workers = 4
+    if n_workers > 8: n_workers = 8
+    if n_workers > 1 and n_docs >= 32 and cfg.incremental == 0:
+        ch_pages := Channel[int](n_workers)
+        ch_posts := Channel[int](n_workers)
+        ch_bins := Channel[int](n_workers)
+        ch_bytes := Channel[int](n_workers)
+        chunk := (n_docs + n_workers - 1) / n_workers
+        let mut launched: int = 0
+        let mut wi: int = 0
+        while wi < n_workers:
+            s_i := wi * chunk
+            if s_i < n_docs:
+                let mut e_i: int = s_i + chunk
+                if e_i > n_docs: e_i = n_docs
+                launched = launched + 1
+                spawn _builder_stream_worker(sources, s_i, e_i, cfg, tr, clx_reg, islands, asset_man, ctx, total_chapters, alt_langs_html, zcodec, ch_pages, ch_posts, ch_bins, ch_bytes)
+            wi = wi + 1
+        let mut ri2: int = 0
+        while ri2 < launched:
+            pages_built = pages_built + ch_pages.recv()
+            posts_built = posts_built + ch_posts.recv()
+            total_bins = total_bins + ch_bins.recv()
+            total_bytes = total_bytes + ch_bytes.recv()
+            ri2 = ri2 + 1
     else:
         let mut ri: int = 0
         while ri < n_docs:
-            doc := docs[ri]
+            src := sources[ri]
             let mut dirty: int = 1
             if cfg.incremental == 1:
-                h := ssg_fnv1a_hash(file_read(doc.abs_path))
-                dirty = ssg_cache_is_dirty(inc_cache, doc.abs_path, h, doc.out_file_path)
+                mt_key := str(fs_mtime_ns(src.abs_path))
+                dirty = ssg_cache_is_dirty(inc_cache, src.abs_path, mt_key, src.out_file_path)
             if dirty == 1:
-                wb := _builder_render_single_doc(doc, cfg, tr, clx_reg, islands, asset_man, ctx, total_chapters, alt_langs_html)
+                wb := _builder_render_source(src, cfg, tr, clx_reg, islands, asset_man, ctx, total_chapters, alt_langs_html, zcodec)
                 total_bytes = total_bytes + wb
                 pages_built = pages_built + 1
-                if doc.collection == "posts":
+                if src.collection == "posts":
                     posts_built = posts_built + 1
-                if cfg.output_binary == 1:
+                if cfg.output_binary == 1 and src.is_clx == 0:
                     total_bins = total_bins + 1
             else:
                 skipped_inc = skipped_inc + 1
@@ -522,6 +847,10 @@ fn builder_run_all(cfg: SsgConfig) -> BuildReport:
 
     if cfg.incremental == 1:
         ssg_cache_save(inc_cache, ".ssg_cache", dir_cache)
+
+    // 3b. Dynamic [slug] Route Expansion
+    if len(dyn_routes) > 0:
+        _builder_expand_dyn_routes(dyn_routes, cfg, dir_cache, tr, clx_reg, islands, asset_man, ctx, items, post_indices, index_pools, col_indices, total_chapters, alt_langs_html, zcodec, pages_built, total_bytes)
 
     // 4. Execute Static JSON API Endpoints (site/pages/api/*.json.cl)
     api_src_dir := ssg_path_join(cfg.site_dir, "pages/api")
@@ -662,45 +991,51 @@ fn builder_run_all(cfg: SsgConfig) -> BuildReport:
     let mut post_api_count: int = 0
 
     let mut si: int = 0
-    while si < len(items):
-        it := items[si]
-        full_u := cfg.base_url + it.url
-        let mut prio: string = "0.8"
-        if it.url == "/index.html" or it.url == "/": prio = "1.0"
-        elif it.collection == "posts": prio = "0.9"
-        sb_append(sm_sb, "  <url><loc>" + ssg_escape_xml(full_u) + "</loc>")
-        if string_length(it.date) > 0:
-            sb_append(sm_sb, "<lastmod>" + ssg_escape_xml(it.date) + "</lastmod>")
-        sb_append(sm_sb, "<priority>" + prio + "</priority></url>\n")
+    let total_items: int = len(items)
+    while si < total_items:
+        arena:
+            let mut end_si: int = si + 128
+            if end_si > total_items:
+                end_si = total_items
+            while si < end_si:
+                it := items[si]
+                full_u := cfg.base_url + it.url
+                let mut prio: string = "0.8"
+                if it.url == "/index.html" or it.url == "/": prio = "1.0"
+                elif it.collection == "posts": prio = "0.9"
+                sb_append(sm_sb, "  <url><loc>" + ssg_escape_xml(full_u) + "</loc>")
+                if string_length(it.date) > 0:
+                    sb_append(sm_sb, "<lastmod>" + ssg_escape_xml(it.date) + "</lastmod>")
+                sb_append(sm_sb, "<priority>" + prio + "</priority></url>\n")
 
-        if it.collection == "posts" or len(post_indices) == 0:
-            sb_append(feed_sb, "    <item>\n      <title>" + ssg_escape_xml(it.title) + "</title>\n")
-            sb_append(feed_sb, "      <link>" + ssg_escape_xml(full_u) + "</link>\n")
-            sb_append(feed_sb, "      <description>" + ssg_escape_xml(it.description) + "</description>\n")
-            if string_length(it.date) > 0:
-                sb_append(feed_sb, "      <pubDate>" + ssg_escape_xml(it.date) + "</pubDate>\n")
-            sb_append(feed_sb, "    </item>\n")
+                if it.collection == "posts" or len(post_indices) == 0:
+                    sb_append(feed_sb, "    <item>\n      <title>" + ssg_escape_xml(it.title) + "</title>\n")
+                    sb_append(feed_sb, "      <link>" + ssg_escape_xml(full_u) + "</link>\n")
+                    sb_append(feed_sb, "      <description>" + ssg_escape_xml(it.description) + "</description>\n")
+                    if string_length(it.date) > 0:
+                        sb_append(feed_sb, "      <pubDate>" + ssg_escape_xml(it.date) + "</pubDate>\n")
+                    sb_append(feed_sb, "    </item>\n")
 
-            sb_append(atom_sb, "  <entry>\n    <title>" + ssg_escape_xml(it.title) + "</title>\n")
-            sb_append(atom_sb, "    <id>" + ssg_escape_xml(full_u) + "</id>\n")
-            sb_append(atom_sb, "    <link href=\"" + ssg_escape_xml(full_u) + "\" />\n")
-            sb_append(atom_sb, "    <summary>" + ssg_escape_xml(it.description) + "</summary>\n  </entry>\n")
+                    sb_append(atom_sb, "  <entry>\n    <title>" + ssg_escape_xml(it.title) + "</title>\n")
+                    sb_append(atom_sb, "    <id>" + ssg_escape_xml(full_u) + "</id>\n")
+                    sb_append(atom_sb, "    <link href=\"" + ssg_escape_xml(full_u) + "\" />\n")
+                    sb_append(atom_sb, "    <summary>" + ssg_escape_xml(it.description) + "</summary>\n  </entry>\n")
 
-        if si > 0: sb_append(srch_sb, ",\n")
-        sb_append(srch_sb, "  {\"title\": \"" + ssg_escape_json(it.title) + "\", \"url\": \"" + ssg_escape_json(it.url) + "\", \"desc\": \"" + ssg_escape_json(it.description) + "\", \"category\": \"" + ssg_escape_json(it.collection) + "\"}")
+                if si > 0: sb_append(srch_sb, ",\n")
+                sb_append(srch_sb, "  {\"title\": \"" + ssg_escape_json(it.title) + "\", \"url\": \"" + ssg_escape_json(it.url) + "\", \"desc\": \"" + ssg_escape_json(it.description) + "\", \"category\": \"" + ssg_escape_json(it.collection) + "\"}")
 
-        if it.collection == "posts":
-            if post_api_count > 0: sb_append(posts_api_sb, ",\n")
-            sb_append(posts_api_sb, "  {\"title\": \"" + ssg_escape_json(it.title) + "\", \"url\": \"" + ssg_escape_json(it.url) + "\", \"date\": \"" + ssg_escape_json(it.date) + "\", \"tags\": \"" + ssg_escape_json(it.tags) + "\"}")
-            post_api_count = post_api_count + 1
+                if it.collection == "posts":
+                    if post_api_count > 0: sb_append(posts_api_sb, ",\n")
+                    sb_append(posts_api_sb, "  {\"title\": \"" + ssg_escape_json(it.title) + "\", \"url\": \"" + ssg_escape_json(it.url) + "\", \"date\": \"" + ssg_escape_json(it.date) + "\", \"tags\": \"" + ssg_escape_json(it.tags) + "\"}")
+                    post_api_count = post_api_count + 1
 
-        cn := _builder_extract_chapter_num(it.slug)
-        if cn > 0:
-            if chap_api_count > 0: sb_append(chap_api_sb, ",\n")
-            sb_append(chap_api_sb, "  {\"id\": " + str(cn) + ", \"slug\": \"" + ssg_escape_json(it.slug) + "\", \"title\": \"" + ssg_escape_json(it.title) + "\", \"url\": \"" + ssg_escape_json(it.url) + "\"}")
-            chap_api_count = chap_api_count + 1
-            file_write(ssg_path_join(cfg.dist_dir, "api/" + it.slug + ".json"), "{\n  \"id\": " + str(cn) + ",\n  \"slug\": \"" + ssg_escape_json(it.slug) + "\",\n  \"title\": \"" + ssg_escape_json(it.title) + "\",\n  \"url\": \"" + ssg_escape_json(it.url) + "\"\n}\n")
-        si = si + 1
+                cn := _builder_extract_chapter_num(it.slug)
+                if cn > 0:
+                    if chap_api_count > 0: sb_append(chap_api_sb, ",\n")
+                    sb_append(chap_api_sb, "  {\"id\": " + str(cn) + ", \"slug\": \"" + ssg_escape_json(it.slug) + "\", \"title\": \"" + ssg_escape_json(it.title) + "\", \"url\": \"" + ssg_escape_json(it.url) + "\"}")
+                    chap_api_count = chap_api_count + 1
+                    ssg_write_file_raw(ssg_path_join(cfg.dist_dir, "api/" + it.slug + ".json"), "{\n  \"id\": " + str(cn) + ",\n  \"slug\": \"" + ssg_escape_json(it.slug) + "\",\n  \"title\": \"" + ssg_escape_json(it.title) + "\",\n  \"url\": \"" + ssg_escape_json(it.url) + "\"\n}\n")
+                si = si + 1
 
     sb_append(sm_sb, "</urlset>\n")
     sb_append(feed_sb, "  </channel>\n</rss>\n")

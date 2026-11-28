@@ -68,8 +68,8 @@ fn islands_discover_custom(reg: IslandRegistry, site_dir: string, dist_dir: stri
             if wasm_enabled == 1:
                 wasm_out := ssg_path_join(dist_dir, "static/islands/" + iname + ".wasm")
                 ssg_ensure_dir(ssg_path_dirname(wasm_out), dir_cache)
-                rc := sys_run("cl build \"" + ap + "\" --target wasm32 -Oz -o \"" + wasm_out + "\" 2>/dev/null || true")
-                if rc == 0 and file_exists(wasm_out) == 1:
+                rc := sys_run("cl build \"" + ap + "\" --clil --target wasm32-unknown-unknown -Oz -o \"" + wasm_out + "\" 2>/dev/null || true")
+                if file_exists(wasm_out) == 1:
                     wasm_url = "/static/islands/" + iname + ".wasm"
             let mut loader_js: string = ""
             if string_length(wasm_url) > 0:

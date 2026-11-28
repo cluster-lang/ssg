@@ -199,7 +199,135 @@ fn _clx_parse_props_from_tag(tag_hdr: string, parent_vars: dict[string, string],
                 continue
         pos = eq + 1
 
-fn clx_render_component(reg: ClxRegistry, call: ClxTagCall, parent_vars: dict[string, string], &out_css: string) -> string:
+fn _clx_extract_named_slots(inner: string, named: dict[string, string]) -> string:
+    tlen := string_length(inner)
+    if tlen == 0 or ssg_contains(inner, "slot=") == 0:
+        return inner
+    sb := sb_new_cap(tlen + 32)
+    let mut pos: int = 0
+    while pos < tlen:
+        op := ssg_find_from(inner, "<", pos)
+        if op < 0:
+            sb_append_slice(sb, inner, pos, tlen - pos)
+            break
+        if op > pos:
+            sb_append_slice(sb, inner, pos, op - pos)
+        gt := ssg_find_from(inner, ">", op + 1)
+        if gt < 0:
+            sb_append_slice(sb, inner, op, tlen - op)
+            break
+        open_tag := substring(inner, op, gt - op + 1)
+        if ssg_contains(open_tag, "slot=") == 1 and ssg_starts_with(open_tag, "</") == 0:
+            // Extract tag name and slot="name"
+            let mut sp: int = 1
+            while sp < string_length(open_tag):
+                ch := byte_at(open_tag, sp)
+                if ch == 32 or ch == 9 or ch == 62 or ch == 47:
+                    break
+                sp = sp + 1
+            tname := substring(open_tag, 1, sp - 1)
+            sa := ssg_find_from(open_tag, "slot=\"", 0)
+            let mut sname: string = ""
+            if sa >= 0:
+                qe := ssg_find_from(open_tag, "\"", sa + 6)
+                if qe > sa + 6:
+                    sname = substring(open_tag, sa + 6, qe - (sa + 6))
+            if string_length(sname) > 0:
+                if ssg_ends_with(open_tag, "/>") == 1:
+                    named[sname] = ""
+                    pos = gt + 1
+                    continue
+                close_t := "</" + tname + ">"
+                open_p := "<" + tname
+                let mut depth: int = 1
+                let mut cur: int = gt + 1
+                let mut found_end: int = -1
+                while cur < tlen:
+                    nc := ssg_find_from(inner, close_t, cur)
+                    if nc < 0:
+                        break
+                    no := ssg_find_from(inner, open_p, cur)
+                    if no >= 0 and no < nc:
+                        nb_ch := byte_at(inner, no + string_length(open_p))
+                        if nb_ch == 32 or nb_ch == 62:
+                            depth = depth + 1
+                            cur = no + string_length(open_p)
+                            continue
+                    depth = depth - 1
+                    if depth == 0:
+                        found_end = nc
+                        break
+                    cur = nc + string_length(close_t)
+                if found_end >= 0:
+                    slot_html := substring(inner, gt + 1, found_end - (gt + 1))
+                    if string_length(tname) == 8 and tname == "template":
+                        named[sname] = slot_html
+                    else:
+                        named[sname] = substring(inner, op, found_end + string_length(close_t) - op)
+                    pos = found_end + string_length(close_t)
+                    continue
+        sb_append_slice(sb, inner, op, gt - op + 1)
+        pos = gt + 1
+    out := sb_to_str(sb)
+    sb_free(sb)
+    return ssg_trim(out)
+
+fn _clx_replace_slots(tmpl: string, def_slot: string, named: dict[string, string]) -> string:
+    tlen := string_length(tmpl)
+    if ssg_contains(tmpl, "<slot") == 0:
+        return tmpl
+    sb := sb_new_cap(tlen + string_length(def_slot) + 64)
+    let mut pos: int = 0
+    while pos < tlen:
+        idx := ssg_find_from(tmpl, "<slot", pos)
+        if idx < 0:
+            sb_append_slice(sb, tmpl, pos, tlen - pos)
+            break
+        if idx > pos:
+            sb_append_slice(sb, tmpl, pos, idx - pos)
+        // Ensure next char after "<slot" is whitespace, '>', or '/'
+        if idx + 5 < tlen:
+            nx := byte_at(tmpl, idx + 5)
+            if nx != 32 and nx != 9 and nx != 62 and nx != 47:
+                sb_append_slice(sb, tmpl, idx, 5)
+                pos = idx + 5
+                continue
+        gt := ssg_find_from(tmpl, ">", idx + 5)
+        if gt < 0:
+            sb_append_slice(sb, tmpl, idx, tlen - idx)
+            break
+        tag_open := substring(tmpl, idx, gt - idx + 1)
+        let mut fallback: string = ""
+        let mut next_pos: int = gt + 1
+        if ssg_ends_with(tag_open, "/>") == 0:
+            cend := ssg_find_from(tmpl, "</slot>", gt + 1)
+            if cend >= 0:
+                fallback = substring(tmpl, gt + 1, cend - (gt + 1))
+                next_pos = cend + 7
+        let mut sname: string = ""
+        ns_idx := ssg_find_from(tag_open, "name=\"", 0)
+        if ns_idx >= 0:
+            qe := ssg_find_from(tag_open, "\"", ns_idx + 6)
+            if qe > ns_idx + 6:
+                sname = substring(tag_open, ns_idx + 6, qe - (ns_idx + 6))
+        if string_length(sname) > 0:
+            if named.has(sname) == 1:
+                sb_append(sb, named[sname])
+            else:
+                sb_append(sb, fallback)
+        else:
+            if string_length(def_slot) > 0:
+                sb_append(sb, def_slot)
+            else:
+                sb_append(sb, fallback)
+        pos = next_pos
+    out := sb_to_str(sb)
+    sb_free(sb)
+    return out
+
+fn _clx_render_component_rec(reg: ClxRegistry, call: ClxTagCall, parent_vars: dict[string, string], &out_css: string, depth: int) -> string:
+    if depth > 16:
+        return call.inner_html
     if reg.by_name.has(call.name) == 0:
         return "<div class=\"clx-missing\" data-component=\"" + ssg_escape_html(call.name) + "\">" + call.inner_html + "</div>"
     comp := reg.components[reg.by_name[call.name]]
@@ -207,10 +335,9 @@ fn clx_render_component(reg: ClxRegistry, call: ClxTagCall, parent_vars: dict[st
     _clx_parse_props_from_tag(call.props, parent_vars, env)
     _clx_eval_frontmatter_vars(comp.script_src, env)
 
-    let mut html: string = comp.template_html
-    html = ssg_replace_all(html, "<slot />", call.inner_html)
-    html = ssg_replace_all(html, "<slot/>", call.inner_html)
-    html = ssg_replace_all(html, "<slot></slot>", call.inner_html)
+    named_slots := dict[string, string]()
+    def_slot := _clx_extract_named_slots(call.inner_html, named_slots)
+    let mut html: string = _clx_replace_slots(comp.template_html, def_slot, named_slots)
 
     // Replace {key} and {props.key} interpolations (preserving {{ ... }} Liquid tags)
     eks := env.keys()
@@ -220,10 +347,75 @@ fn clx_render_component(reg: ClxRegistry, call: ClxTagCall, parent_vars: dict[st
         html = ssg_replace_all(html, "{" + ek + "}", ssg_escape_html(env[ek]))
         ki = ki + 1
 
+    // Recursively expand nested .clx components inside rendered template
+    if ssg_contains(html, "<") == 1:
+        hlen := string_length(html)
+        sb := sb_new_cap(hlen + 64)
+        let mut pos: int = 0
+        let mut did_expand: int = 0
+        while pos < hlen:
+            lt := ssg_find_from(html, "<", pos)
+            if lt < 0:
+                sb_append_slice(sb, html, pos, hlen - pos)
+                break
+            if lt > pos:
+                sb_append_slice(sb, html, pos, lt - pos)
+            if lt + 1 < hlen and byte_at(html, lt + 1) >= 65 and byte_at(html, lt + 1) <= 90:
+                let mut sp: int = lt + 1
+                while sp < hlen:
+                    ch := byte_at(html, sp)
+                    if ch == 32 or ch == 9 or ch == 47 or ch == 62:
+                        break
+                    sp = sp + 1
+                cname := substring(html, lt + 1, sp - (lt + 1))
+                gt := ssg_find_from(html, ">", sp)
+                if reg.by_name.has(cname) == 1 and gt >= sp:
+                    tag_hdr := substring(html, lt, gt - lt + 1)
+                    let mut inner_sub: string = ""
+                    let mut after_pos: int = gt + 1
+                    if ssg_ends_with(tag_hdr, "/>") == 0:
+                        close_t := "</" + cname + ">"
+                        open_p := "<" + cname
+                        let mut cdepth: int = 1
+                        let mut cur: int = gt + 1
+                        let mut found_e: int = -1
+                        while cur < hlen:
+                            nc := ssg_find_from(html, close_t, cur)
+                            if nc < 0:
+                                break
+                            no := ssg_find_from(html, open_p, cur)
+                            if no >= 0 and no < nc:
+                                nb_ch := byte_at(html, no + string_length(open_p))
+                                if nb_ch == 32 or nb_ch == 62 or nb_ch == 47:
+                                    cdepth = cdepth + 1
+                                    cur = no + string_length(open_p)
+                                    continue
+                            cdepth = cdepth - 1
+                            if cdepth == 0:
+                                found_e = nc
+                                break
+                            cur = nc + string_length(close_t)
+                        if found_e >= 0:
+                            inner_sub = substring(html, gt + 1, found_e - (gt + 1))
+                            after_pos = found_e + string_length(close_t)
+                    sub_call := ClxTagCall(cname, tag_hdr, inner_sub, "")
+                    sb_append(sb, _clx_render_component_rec(reg, sub_call, env, out_css, depth + 1))
+                    did_expand = 1
+                    pos = after_pos
+                    continue
+            sb_append_byte(sb, 60)
+            pos = lt + 1
+        if did_expand == 1:
+            html = sb_to_str(sb)
+        sb_free(sb)
+
     if string_length(comp.scoped_css) > 0:
         out_css = out_css + "\n" + comp.scoped_css
         html = "<div class=\"" + comp.scope_class + "\">" + html + "</div>"
     return html
+
+fn clx_render_component(reg: ClxRegistry, call: ClxTagCall, parent_vars: dict[string, string], &out_css: string) -> string:
+    return _clx_render_component_rec(reg, call, parent_vars, out_css, 0)
 
 fn clx_expand_calls(reg: ClxRegistry, calls: vector[ClxTagCall], html: string, parent_vars: dict[string, string]) -> string:
     if len(calls) == 0:

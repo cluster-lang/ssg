@@ -121,45 +121,51 @@ fn _col_is_valid_date(d: string) -> int:
         i = i + 1
     return 1
 
-fn collections_validate_doc(reg: SchemaRegistry, doc: SsgRichDoc, errors: vector[string]) -> int:
-    if reg.by_name.has(doc.collection) == 0:
+fn _col_validate_fields(reg: SchemaRegistry, collection: string, abs_path: string, fields: dict[string, string], title: string, author: string, date: string, tags: string, errors: vector[string]) -> int:
+    if reg.by_name.has(collection) == 0:
         return 1
-    sc := reg.schemas[reg.by_name[doc.collection]]
+    sc := reg.schemas[reg.by_name[collection]]
     let mut ok: int = 1
     let mut ri: int = 0
     while ri < len(sc.rules):
         rule := sc.rules[ri]
         let mut present: int = 0
         let mut val: string = ""
-        if doc.fm.fields.has(rule.name) == 1:
-            val = doc.fm.fields[rule.name]
+        if fields.has(rule.name) == 1:
+            val = fields[rule.name]
             if string_length(ssg_trim(val)) > 0:
                 present = 1
-        elif rule.name == "title" and string_length(doc.title) > 0:
-            val = doc.title; present = 1
-        elif rule.name == "author" and string_length(doc.author) > 0:
-            val = doc.author; present = 1
-        elif rule.name == "date" and string_length(doc.date) > 0:
-            val = doc.date; present = 1
-        elif rule.name == "tags" and string_length(doc.tags) > 0:
-            val = doc.tags; present = 1
+        elif rule.name == "title" and string_length(title) > 0:
+            val = title; present = 1
+        elif rule.name == "author" and string_length(author) > 0:
+            val = author; present = 1
+        elif rule.name == "date" and string_length(date) > 0:
+            val = date; present = 1
+        elif rule.name == "tags" and string_length(tags) > 0:
+            val = tags; present = 1
 
         if present == 0:
             if rule.required == 1:
-                errors.push(doc.abs_path + ":1: error[SSG-SCHEMA]: collection '" + doc.collection + "' requires field '" + rule.name + "' (" + rule.kind + ")")
+                errors.push(abs_path + ":1: error[SSG-SCHEMA]: collection '" + collection + "' requires field '" + rule.name + "' (" + rule.kind + ")")
                 ok = 0
         else:
             if rule.kind == "date" and _col_is_valid_date(val) == 0:
-                errors.push(doc.abs_path + ":1: error[SSG-SCHEMA]: field '" + rule.name + "' expected YYYY-MM-DD date, got '" + val + "'")
+                errors.push(abs_path + ":1: error[SSG-SCHEMA]: field '" + rule.name + "' expected YYYY-MM-DD date, got '" + val + "'")
                 ok = 0
             elif rule.kind == "int":
                 if ssg_parse_int(val, -9999999) == -9999999:
-                    errors.push(doc.abs_path + ":1: error[SSG-SCHEMA]: field '" + rule.name + "' expected int, got '" + val + "'")
+                    errors.push(abs_path + ":1: error[SSG-SCHEMA]: field '" + rule.name + "' expected int, got '" + val + "'")
                     ok = 0
             elif rule.kind == "bool":
                 lv := ssg_lower(ssg_trim(val))
                 if lv != "true" and lv != "false" and lv != "1" and lv != "0":
-                    errors.push(doc.abs_path + ":1: error[SSG-SCHEMA]: field '" + rule.name + "' expected bool, got '" + val + "'")
+                    errors.push(abs_path + ":1: error[SSG-SCHEMA]: field '" + rule.name + "' expected bool, got '" + val + "'")
                     ok = 0
         ri = ri + 1
     return ok
+
+fn collections_validate_doc(reg: SchemaRegistry, doc: SsgRichDoc, errors: vector[string]) -> int:
+    return _col_validate_fields(reg, doc.collection, doc.abs_path, doc.fm.fields, doc.title, doc.author, doc.date, doc.tags, errors)
+
+fn collections_validate_header(reg: SchemaRegistry, hdr: SsgPageHeader, errors: vector[string]) -> int:
+    return _col_validate_fields(reg, hdr.source.collection, hdr.source.abs_path, hdr.fm_fields, hdr.title, hdr.author, hdr.date, hdr.tags, errors)

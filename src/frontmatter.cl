@@ -23,9 +23,10 @@ model DataRegistry:
     list_counts: dict[string, int]
 
 fn fm_new_empty(body: string) -> FrontmatterData:
-    f := dict[string, string]()
-    lk := dict[string, string]()
-    return FrontmatterData(f, lk, "", body, 1)
+    fm := FrontmatterData()
+    fm.body = body
+    fm.body_start_line = 1
+    return fm
 
 fn _fm_line_indent(raw: string) -> int:
     n := string_length(raw)
@@ -200,11 +201,14 @@ fn fm_parse_toml_lines(lines: vector[string], start_idx: int, end_idx: int, fiel
 
 fn fm_parse_document(raw_text: string) -> FrontmatterData:
     lines := ssg_split_lines(raw_text)
-    fields := dict[string, string]()
-    lists := dict[string, string]()
+    fm := FrontmatterData()
+    fields := fm.fields
+    lists := fm.list_keys
     n := len(lines)
     if n == 0:
-        return fm_new_empty(raw_text)
+        fm.body = raw_text
+        fm.body_start_line = 1
+        return fm
 
     first := ssg_trim(lines[0])
     // Case 1: Standard YAML frontmatter (--- ... ---)
@@ -225,9 +229,10 @@ fn fm_parse_document(raw_text: string) -> FrontmatterData:
                 if bi + 1 < n:
                     sb_append_byte(sb, 10)
                 bi = bi + 1
-            body := sb_to_str(sb)
+            fm.body = sb_to_str(sb)
             sb_free(sb)
-            return FrontmatterData(fields, lists, "", body, end_i + 2)
+            fm.body_start_line = end_i + 2
+            return fm
 
     // Case 2: Hugo TOML frontmatter (+++ ... +++)
     if first == "+++":
@@ -247,9 +252,10 @@ fn fm_parse_document(raw_text: string) -> FrontmatterData:
                 if bi + 1 < n:
                     sb_append_byte(sb, 10)
                 bi = bi + 1
-            body := sb_to_str(sb)
+            fm.body = sb_to_str(sb)
             sb_free(sb)
-            return FrontmatterData(fields, lists, "", body, end_i + 2)
+            fm.body_start_line = end_i + 2
+            return fm
 
     // Case 3: Native .cld frontmatter (key: val\n...\n===)
     let mut eq_idx: int = -1
@@ -271,11 +277,14 @@ fn fm_parse_document(raw_text: string) -> FrontmatterData:
             if bi + 1 < n:
                 sb_append_byte(sb, 10)
             bi = bi + 1
-        body := sb_to_str(sb)
+        fm.body = sb_to_str(sb)
         sb_free(sb)
-        return FrontmatterData(fields, lists, "", body, eq_idx + 2)
+        fm.body_start_line = eq_idx + 2
+        return fm
 
-    return FrontmatterData(fields, lists, "", raw_text, 1)
+    fm.body = raw_text
+    fm.body_start_line = 1
+    return fm
 
 // Parse Jekyll filename pattern YYYY-MM-DD-my-post-title -> (date, slug)
 fn fm_extract_date_from_stem(stem: string, &out_date: string, &out_slug: string) -> void:
@@ -301,47 +310,108 @@ fn fm_extract_date_from_stem(stem: string, &out_date: string, &out_slug: string)
 // Data Registry Loader (site/data/** or _data/**)
 // ------------------------------------------------------------------------------
 
-fn _data_parse_simple_json_records(dataset_name: string, raw: string, flat: dict[string, string], counts: dict[string, int]) -> void:
-    // Lightweight JSON object-array / object extractor for site/data/*.json
-    t := ssg_trim(raw)
-    tlen := string_length(t)
-    if tlen == 0:
+fn _data_json_skip_ws(raw: string, rlen: int, &pos: int) -> void:
+    while pos < rlen:
+        b := byte_at(raw, pos)
+        if b == 32 or b == 9 or b == 10 or b == 13:
+            pos = pos + 1
+        else:
+            break
+
+fn _data_json_read_str(raw: string, rlen: int, &pos: int) -> string:
+    if pos >= rlen or byte_at(raw, pos) != 34:
+        return ""
+    pos = pos + 1
+    sb := sb_new_cap(64)
+    while pos < rlen:
+        b := byte_at(raw, pos)
+        if b == 34:
+            pos = pos + 1
+            break
+        if b == 92 and pos + 1 < rlen:
+            nb := byte_at(raw, pos + 1)
+            if nb == 110: sb_append_byte(sb, 10)
+            elif nb == 114: sb_append_byte(sb, 13)
+            elif nb == 116: sb_append_byte(sb, 9)
+            else: sb_append_byte(sb, nb)
+            pos = pos + 2
+            continue
+        sb_append_byte(sb, b)
+        pos = pos + 1
+    out := sb_to_str(sb)
+    sb_free(sb)
+    return out
+
+fn _data_walk_json_value(raw: string, rlen: int, &pos: int, prefix: string, flat: dict[string, string], counts: dict[string, int], depth: int) -> void:
+    if depth > 32:
         return
-    if byte_at(t, 0) == 91:
-        // Array of objects [{ "title": "Docs", "url": "/docs.html" }, ...]
+    _data_json_skip_ws(raw, rlen, pos)
+    if pos >= rlen:
+        return
+    ch := byte_at(raw, pos)
+    if ch == 123:
+        pos = pos + 1
+        while pos < rlen:
+            _data_json_skip_ws(raw, rlen, pos)
+            if pos >= rlen or byte_at(raw, pos) == 125:
+                if pos < rlen: pos = pos + 1
+                break
+            if byte_at(raw, pos) == 44:
+                pos = pos + 1
+                continue
+            let mut key: string = ""
+            if byte_at(raw, pos) == 34:
+                key = _data_json_read_str(raw, rlen, pos)
+            else:
+                ks := pos
+                while pos < rlen and byte_at(raw, pos) != 58 and byte_at(raw, pos) != 125:
+                    pos = pos + 1
+                key = ssg_trim(substring(raw, ks, pos - ks))
+            _data_json_skip_ws(raw, rlen, pos)
+            if pos < rlen and byte_at(raw, pos) == 58:
+                pos = pos + 1
+            next_prefix := prefix + "." + key
+            _data_walk_json_value(raw, rlen, pos, next_prefix, flat, counts, depth + 1)
+            _data_json_skip_ws(raw, rlen, pos)
+            if pos < rlen and byte_at(raw, pos) == 44:
+                pos = pos + 1
+    elif ch == 91:
+        pos = pos + 1
         let mut rec_idx: int = 0
-        let mut pos: int = 1
-        while pos < tlen:
-            ob := ssg_find_from(t, "{", pos)
-            if ob < 0:
+        while pos < rlen:
+            _data_json_skip_ws(raw, rlen, pos)
+            if pos >= rlen or byte_at(raw, pos) == 93:
+                if pos < rlen: pos = pos + 1
                 break
-            cb := ssg_find_from(t, "}", ob + 1)
-            if cb < 0:
-                break
-            obj_str := substring(t, ob + 1, cb - ob - 1)
-            pairs := ssg_split(obj_str, ",")
-            let mut pi: int = 0
-            while pi < len(pairs):
-                col := ssg_find_from(pairs[pi], ":", 0)
-                if col > 0:
-                    pk := ssg_strip_quotes(substring(pairs[pi], 0, col))
-                    pv := ssg_strip_quotes(substring(pairs[pi], col + 1, string_length(pairs[pi]) - col - 1))
-                    flat[dataset_name + "[" + str(rec_idx) + "]." + pk] = pv
-                pi = pi + 1
+            if byte_at(raw, pos) == 44:
+                pos = pos + 1
+                continue
+            item_prefix := prefix + "[" + str(rec_idx) + "]"
+            _data_walk_json_value(raw, rlen, pos, item_prefix, flat, counts, depth + 1)
             rec_idx = rec_idx + 1
-            pos = cb + 1
-        counts[dataset_name] = rec_idx
-    elif byte_at(t, 0) == 123:
-        inner := substring(t, 1, tlen - 2)
-        pairs := ssg_split(inner, ",")
-        let mut pi: int = 0
-        while pi < len(pairs):
-            col := ssg_find_from(pairs[pi], ":", 0)
-            if col > 0:
-                pk := ssg_strip_quotes(substring(pairs[pi], 0, col))
-                pv := ssg_strip_quotes(substring(pairs[pi], col + 1, string_length(pairs[pi]) - col - 1))
-                flat[dataset_name + "." + pk] = pv
-            pi = pi + 1
+            _data_json_skip_ws(raw, rlen, pos)
+            if pos < rlen and byte_at(raw, pos) == 44:
+                pos = pos + 1
+        counts[prefix] = rec_idx
+    elif ch == 34:
+        flat[prefix] = _data_json_read_str(raw, rlen, pos)
+    else:
+        vs := pos
+        while pos < rlen:
+            b := byte_at(raw, pos)
+            if b == 44 or b == 125 or b == 93 or b == 10 or b == 13 or b == 32 or b == 9:
+                break
+            pos = pos + 1
+        val := ssg_trim(substring(raw, vs, pos - vs))
+        if val != "null":
+            flat[prefix] = val
+
+fn _data_parse_simple_json_records(dataset_name: string, raw: string, flat: dict[string, string], counts: dict[string, int]) -> void:
+    rlen := string_length(raw)
+    if rlen == 0:
+        return
+    let mut pos: int = 0
+    _data_walk_json_value(raw, rlen, pos, dataset_name, flat, counts, 0)
 
 fn data_load_all(site_dir: string) -> DataRegistry:
     flat := dict[string, string]()
