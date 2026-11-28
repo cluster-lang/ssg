@@ -232,6 +232,7 @@ fn fm_parse_document(raw_text: string) -> FrontmatterData:
             fm.body = sb_to_str(sb)
             sb_free(sb)
             fm.body_start_line = end_i + 2
+            list_free(lines)
             return fm
 
     // Case 2: Hugo TOML frontmatter (+++ ... +++)
@@ -255,6 +256,7 @@ fn fm_parse_document(raw_text: string) -> FrontmatterData:
             fm.body = sb_to_str(sb)
             sb_free(sb)
             fm.body_start_line = end_i + 2
+            list_free(lines)
             return fm
 
     // Case 3: Native .cld frontmatter (key: val\n...\n===)
@@ -280,10 +282,12 @@ fn fm_parse_document(raw_text: string) -> FrontmatterData:
         fm.body = sb_to_str(sb)
         sb_free(sb)
         fm.body_start_line = eq_idx + 2
+        list_free(lines)
         return fm
 
     fm.body = raw_text
     fm.body_start_line = 1
+    list_free(lines)
     return fm
 
 // Parse Jekyll filename pattern YYYY-MM-DD-my-post-title -> (date, slug)

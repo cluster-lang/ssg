@@ -430,6 +430,24 @@ fn _md_is_ol_prefix(t: string, &body_out: string) -> int:
 // Main Block & Directive Parser
 // ------------------------------------------------------------------------------
 
+fn _md_count_words_inline(s: string) -> int:
+    n := string_length(s)
+    if n == 0:
+        return 0
+    let mut cnt: int = 0
+    let mut in_w: int = 0
+    let mut k: int = 0
+    while k < n:
+        c := byte_at(s, k)
+        if c == 32 or c == 9 or c == 10 or c == 13:
+            in_w = 0
+        else:
+            if in_w == 0:
+                cnt = cnt + 1
+                in_w = 1
+        k = k + 1
+    return cnt
+
 fn md_parse_and_render(body: string) -> MarkdownResult:
     lines := ssg_split_lines(body)
     n := len(lines)
@@ -782,7 +800,7 @@ fn md_parse_and_render(body: string) -> MarkdownResult:
             if para_sb.len > 0:
                 sb_append_byte(para_sb, 32)
             sb_append(para_sb, pt)
-            word_count = word_count + len(ssg_split(pt, " "))
+            word_count = word_count + _md_count_words_inline(pt)
             i = i + 1
         para_txt := sb_to_str(para_sb)
         sb_free(para_sb)

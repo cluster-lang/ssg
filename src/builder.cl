@@ -198,6 +198,13 @@ fn _builder_render_single_doc(doc: SsgRichDoc, cfg: SsgConfig, tr: TemplateRegis
             file_write(bin_out, packed)
             written = written + string_length(packed)
 
+        dict_free(vars)
+        dict_free(doc.fm.fields)
+        dict_free(doc.fm.list_keys)
+        list_free(doc.md.toc)
+        list_free(doc.md.islands)
+        list_free(doc.md.clx_calls)
+
     return written
 
 fn _builder_render_clx_source(src: SsgPageSource, cfg: SsgConfig, tr: TemplateRegistry, asset_man: AssetManifest, ctx: RenderContext, alt_langs_html: string, zcodec: ZlibCodec) -> int:
@@ -282,6 +289,15 @@ fn _pack_pop(sb: StrBuf, lens: vector[int], &idx: int, &off: int) -> string:
     off = off + sl
     return str_from_parts(p, sl)
 
+fn _builder_is_standard_meta_key(k: string) -> int:
+    if k == "title" or k == "author" or k == "date" or k == "layout" or k == "tags":
+        return 1
+    if k == "categories" or k == "slug" or k == "description" or k == "lang":
+        return 1
+    if k == "draft" or k == "published" or k == "permalink":
+        return 1
+    return 0
+
 fn _builder_scan_and_record(
     ap: string,
     rel: string,
@@ -299,6 +315,7 @@ fn _builder_scan_and_record(
     tag_indices: dict[string, int],
     cat_indices: dict[string, int],
     schema_errors: vector[string],
+    shared_empty_meta: dict[string, string],
     &total_chapters: int
 ) -> void:
     pack_sb := sb_new_cap(1024)
@@ -319,9 +336,6 @@ fn _builder_scan_and_record(
             url := "/" + slug + ".html"
             outp := ssg_url_to_dist_path(cfg.dist_dir, url)
 
-            _pack_push(pack_sb, pack_lens, ap)
-            _pack_push(pack_sb, pack_lens, rel)
-            _pack_push(pack_sb, pack_lens, "pages")
             _pack_push(pack_sb, pack_lens, url)
             _pack_push(pack_sb, pack_lens, outp)
             _pack_push(pack_sb, pack_lens, title)
@@ -338,13 +352,19 @@ fn _builder_scan_and_record(
             if hdr.is_draft == 1 and cfg.include_drafts == 0:
                 keep_entry = 0
             else:
-                let mut local_errs: vector[string] = []
-                collections_validate_header(schema_reg, hdr, local_errs)
+                let mut n_errs_local: int = 0
+                if len(schema_reg.schemas) > 0:
+                    let mut local_errs: vector[string] = []
+                    collections_validate_header(schema_reg, hdr, local_errs)
+                    n_errs_local = len(local_errs)
+                    n_errs = n_errs_local
+                    let mut lei: int = 0
+                    while lei < n_errs_local:
+                        _pack_push(pack_sb, pack_lens, local_errs[lei])
+                        lei = lei + 1
+                    list_free(local_errs)
                 rt_min = hdr.reading_time_min
 
-                _pack_push(pack_sb, pack_lens, hdr.source.abs_path)
-                _pack_push(pack_sb, pack_lens, hdr.source.rel_path)
-                _pack_push(pack_sb, pack_lens, hdr.source.collection)
                 _pack_push(pack_sb, pack_lens, hdr.source.permalink_url)
                 _pack_push(pack_sb, pack_lens, hdr.source.out_file_path)
                 _pack_push(pack_sb, pack_lens, hdr.title)
@@ -358,19 +378,16 @@ fn _builder_scan_and_record(
                 _pack_push(pack_sb, pack_lens, hdr.lang)
 
                 fks := hdr.fm_fields.keys()
-                n_meta = len(fks)
                 let mut fki: int = 0
-                while fki < n_meta:
+                while fki < len(fks):
                     fk := fks[fki]
-                    _pack_push(pack_sb, pack_lens, fk)
-                    _pack_push(pack_sb, pack_lens, hdr.fm_fields[fk])
+                    if _builder_is_standard_meta_key(fk) == 0:
+                        _pack_push(pack_sb, pack_lens, fk)
+                        _pack_push(pack_sb, pack_lens, hdr.fm_fields[fk])
+                        n_meta = n_meta + 1
                     fki = fki + 1
-
-                n_errs = len(local_errs)
-                let mut lei: int = 0
-                while lei < n_errs:
-                    _pack_push(pack_sb, pack_lens, local_errs[lei])
-                    lei = lei + 1
+                list_free(fks)
+                dict_free(hdr.fm_fields)
 
     if keep_entry == 0:
         sb_free(pack_sb)
@@ -378,44 +395,71 @@ fn _builder_scan_and_record(
 
     let mut pidx: int = 0
     let mut poff: int = 0
-    p_ap := _pack_pop(pack_sb, pack_lens, pidx, poff)
-    p_rel := _pack_pop(pack_sb, pack_lens, pidx, poff)
-    p_col := _pack_pop(pack_sb, pack_lens, pidx, poff)
-    p_url := _pack_pop(pack_sb, pack_lens, pidx, poff)
-    p_outp := _pack_pop(pack_sb, pack_lens, pidx, poff)
-    p_title := _pack_pop(pack_sb, pack_lens, pidx, poff)
-    p_date := _pack_pop(pack_sb, pack_lens, pidx, poff)
-    p_author := _pack_pop(pack_sb, pack_lens, pidx, poff)
-    p_desc := _pack_pop(pack_sb, pack_lens, pidx, poff)
-    p_tags := _pack_pop(pack_sb, pack_lens, pidx, poff)
-    p_cats := _pack_pop(pack_sb, pack_lens, pidx, poff)
-    p_slug := _pack_pop(pack_sb, pack_lens, pidx, poff)
-    p_excerpt := _pack_pop(pack_sb, pack_lens, pidx, poff)
-    p_lang := _pack_pop(pack_sb, pack_lens, pidx, poff)
-
-    sum_meta := dict[string, string]()
-    let mut mi: int = 0
-    while mi < n_meta:
-        mk := _pack_pop(pack_sb, pack_lens, pidx, poff)
-        mv := _pack_pop(pack_sb, pack_lens, pidx, poff)
-        sum_meta[mk] = mv
-        mi = mi + 1
-
     let mut ei: int = 0
     while ei < n_errs:
         schema_errors.push(_pack_pop(pack_sb, pack_lens, pidx, poff))
         ei = ei + 1
 
+    let mut p_url: string = ""
+    let mut p_outp: string = ""
+    let mut p_title: string = ""
+    let mut p_date: string = ""
+    let mut p_author: string = ""
+    let mut p_desc: string = ""
+    let mut p_tags: string = ""
+    let mut p_cats: string = ""
+    let mut p_slug: string = ""
+    let mut p_excerpt: string = ""
+    let mut p_lang: string = ""
+
+    if is_clx == 1:
+        p_url = _pack_pop(pack_sb, pack_lens, pidx, poff)
+        p_outp = _pack_pop(pack_sb, pack_lens, pidx, poff)
+        p_title = _pack_pop(pack_sb, pack_lens, pidx, poff)
+        p_date = _pack_pop(pack_sb, pack_lens, pidx, poff)
+        p_author = _pack_pop(pack_sb, pack_lens, pidx, poff)
+        p_desc = _pack_pop(pack_sb, pack_lens, pidx, poff)
+        p_tags = _pack_pop(pack_sb, pack_lens, pidx, poff)
+        p_cats = _pack_pop(pack_sb, pack_lens, pidx, poff)
+        p_slug = _pack_pop(pack_sb, pack_lens, pidx, poff)
+        p_excerpt = _pack_pop(pack_sb, pack_lens, pidx, poff)
+        p_lang = _pack_pop(pack_sb, pack_lens, pidx, poff)
+    else:
+        p_url = _pack_pop(pack_sb, pack_lens, pidx, poff)
+        p_outp = _pack_pop(pack_sb, pack_lens, pidx, poff)
+        p_title = _pack_pop(pack_sb, pack_lens, pidx, poff)
+        p_date = _pack_pop(pack_sb, pack_lens, pidx, poff)
+        p_author = _pack_pop(pack_sb, pack_lens, pidx, poff)
+        p_desc = _pack_pop(pack_sb, pack_lens, pidx, poff)
+        p_tags = _pack_pop(pack_sb, pack_lens, pidx, poff)
+        p_cats = _pack_pop(pack_sb, pack_lens, pidx, poff)
+        p_slug = _pack_pop(pack_sb, pack_lens, pidx, poff)
+        p_excerpt = _pack_pop(pack_sb, pack_lens, pidx, poff)
+        p_lang = _pack_pop(pack_sb, pack_lens, pidx, poff)
+
+    let mut sum_meta: dict[string, string] = shared_empty_meta
+    if n_meta > 0:
+        sum_meta = dict[string, string]()
+        let mut mi: int = 0
+        while mi < n_meta:
+            mk := _pack_pop(pack_sb, pack_lens, pidx, poff)
+            mv := _pack_pop(pack_sb, pack_lens, pidx, poff)
+            sum_meta[mk] = mv
+            mi = mi + 1
+
     sb_free(pack_sb)
 
-    out_src := SsgPageSource(p_ap, p_rel, p_col, p_url, p_outp, is_clx)
+    let mut p_col: string = col
+    if is_clx == 1:
+        p_col = "pages"
+    out_src := SsgPageSource(ap, rel, p_col, p_url, p_outp, is_clx)
     out_sum := PageSummary(p_title, p_url, p_date, p_author, p_desc, p_tags, p_cats, p_col, p_slug, p_excerpt, rt_min, p_lang, sum_meta)
 
-    ch_n := _builder_extract_chapter_num(out_sum.slug)
-    if ch_n > total_chapters:
-        total_chapters = ch_n
-
-    ssg_ensure_dir(ssg_path_dirname(out_src.out_file_path), dir_cache)
+    arena:
+        ch_n := _builder_extract_chapter_num(out_sum.slug)
+        if ch_n > total_chapters:
+            total_chapters = ch_n
+        ssg_ensure_dir(ssg_path_dirname(out_src.out_file_path), dir_cache)
 
     di := len(items)
     items.push(out_sum)
@@ -484,6 +528,7 @@ fn _builder_scan_sources_streaming(
 
     let mut sources: vector[SsgPageSource] = []
     seen_paths := dict[string, int]()
+    shared_empty_meta := dict[string, string]()
 
     // 1. Scan pages/
     let mut pdirs: vector[string] = []
@@ -503,8 +548,10 @@ fn _builder_scan_sources_streaming(
                     if ssg_contains(rel, "[slug]") == 1:
                         dyn_routes.push(SsgDynRoute(ap, rel, "pages", 0))
                     else:
-                        _builder_scan_and_record(ap, rel, "pages", 0, cfg, dir_cache, schema_reg, sources, items, post_indices, page_indices, index_pools, col_indices, tag_indices, cat_indices, schema_errors, total_chapters)
+                        _builder_scan_and_record(ap, rel, "pages", 0, cfg, dir_cache, schema_reg, sources, items, post_indices, page_indices, index_pools, col_indices, tag_indices, cat_indices, schema_errors, shared_empty_meta, total_chapters)
                 i = i + 1
+            list_free(scan.abs_paths)
+            list_free(scan.rel_paths)
         pdi = pdi + 1
 
     // 2. Scan posts/ and _posts/
@@ -526,8 +573,10 @@ fn _builder_scan_sources_streaming(
                     if ssg_contains(rel, "[slug]") == 1:
                         dyn_routes.push(SsgDynRoute(ap, rel, "posts", 0))
                     else:
-                        _builder_scan_and_record(ap, rel, "posts", 0, cfg, dir_cache, schema_reg, sources, items, post_indices, page_indices, index_pools, col_indices, tag_indices, cat_indices, schema_errors, total_chapters)
+                        _builder_scan_and_record(ap, rel, "posts", 0, cfg, dir_cache, schema_reg, sources, items, post_indices, page_indices, index_pools, col_indices, tag_indices, cat_indices, schema_errors, shared_empty_meta, total_chapters)
                 i = i + 1
+            list_free(scan.abs_paths)
+            list_free(scan.rel_paths)
         pti = pti + 1
 
     // 3. Scan custom collections under site/content/<col>/** or site/collections/<col>/**
@@ -555,8 +604,10 @@ fn _builder_scan_sources_streaming(
                                 if ssg_contains(rel, "[slug]") == 1:
                                     dyn_routes.push(SsgDynRoute(ap, rel, col, 0))
                                 else:
-                                    _builder_scan_and_record(ap, rel, col, 0, cfg, dir_cache, schema_reg, sources, items, post_indices, page_indices, index_pools, col_indices, tag_indices, cat_indices, schema_errors, total_chapters)
+                                    _builder_scan_and_record(ap, rel, col, 0, cfg, dir_cache, schema_reg, sources, items, post_indices, page_indices, index_pools, col_indices, tag_indices, cat_indices, schema_errors, shared_empty_meta, total_chapters)
                             i = i + 1
+                        list_free(scan.abs_paths)
+                        list_free(scan.rel_paths)
                 si = si + 1
         cdi = cdi + 1
 
@@ -573,9 +624,12 @@ fn _builder_scan_sources_streaming(
             if ssg_contains(rel, "[slug]") == 1:
                 dyn_routes.push(SsgDynRoute(ap, rel, "pages", 1))
             else:
-                _builder_scan_and_record(ap, rel, "pages", 1, cfg, dir_cache, schema_reg, sources, items, post_indices, page_indices, index_pools, col_indices, tag_indices, cat_indices, schema_errors, total_chapters)
+                _builder_scan_and_record(ap, rel, "pages", 1, cfg, dir_cache, schema_reg, sources, items, post_indices, page_indices, index_pools, col_indices, tag_indices, cat_indices, schema_errors, shared_empty_meta, total_chapters)
             i = i + 1
+        list_free(scan.abs_paths)
+        list_free(scan.rel_paths)
 
+    dict_free(seen_paths)
     return sources
 
 fn _builder_expand_dyn_routes(
@@ -782,7 +836,11 @@ fn builder_run_all(cfg: SsgConfig) -> BuildReport:
     if cfg.incremental == 1:
         let mut watch_dirs: vector[string] = []
         watch_dirs.push(ssg_path_join(cfg.site_dir, "layouts"))
+        watch_dirs.push(ssg_path_join(cfg.site_dir, "layouts/partials"))
+        watch_dirs.push(ssg_path_join(cfg.site_dir, "_layouts"))
         watch_dirs.push(ssg_path_join(cfg.site_dir, "components"))
+        watch_dirs.push(ssg_path_join(cfg.site_dir, "includes"))
+        watch_dirs.push(ssg_path_join(cfg.site_dir, "_includes"))
         watch_dirs.push(ssg_path_join(cfg.site_dir, "data"))
         gsig := ssg_fnv1a_hash(cfg.site_name + "|" + cfg.base_url + "|" + fs_max_source_signature(watch_dirs))
         inc_cache = ssg_cache_load(".ssg_cache", gsig)
@@ -966,97 +1024,140 @@ fn builder_run_all(cfg: SsgConfig) -> BuildReport:
             pgn = pgn + 1
 
     // 7. Dynamic sitemap.xml, feed.xml (RSS 2.0), atom.xml, robots.txt, search-index.json & APIs
-    sm_sb := sb_new_cap(2048)
-    sb_append(sm_sb, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n")
-    feed_sb := sb_new_cap(2048)
-    sb_append(feed_sb, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<rss version=\"2.0\" xmlns:atom=\"http://www.w3.org/2005/Atom\">\n  <channel>\n")
-    sb_append(feed_sb, "    <title>" + ssg_escape_xml(cfg.site_name) + "</title>\n")
-    sb_append(feed_sb, "    <link>" + ssg_escape_xml(cfg.base_url) + "</link>\n")
-    sb_append(feed_sb, "    <description>" + ssg_escape_xml(cfg.site_tagline) + "</description>\n")
-    sb_append(feed_sb, "    <atom:link href=\"" + ssg_escape_xml(cfg.base_url) + "/feed.xml\" rel=\"self\" type=\"application/rss+xml\" />\n")
-
-    atom_sb := sb_new_cap(2048)
-    sb_append(atom_sb, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<feed xmlns=\"http://www.w3.org/2005/Atom\">\n")
-    sb_append(atom_sb, "  <title>" + ssg_escape_xml(cfg.site_name) + "</title>\n")
-    sb_append(atom_sb, "  <id>" + ssg_escape_xml(cfg.base_url) + "/</id>\n")
-    sb_append(atom_sb, "  <link href=\"" + ssg_escape_xml(cfg.base_url) + "/atom.xml\" rel=\"self\" />\n")
-
-    srch_sb := sb_new_cap(2048)
-    sb_append(srch_sb, "[\n")
-    posts_api_sb := sb_new_cap(1024)
-    sb_append(posts_api_sb, "[\n")
-    chap_api_sb := sb_new_cap(1024)
-    sb_append(chap_api_sb, "[\n")
+    // Stream one artifact at a time using a single reused StrBuf to keep peak RSS minimal.
+    let total_items: int = len(items)
     let mut chap_api_count: int = 0
     let mut post_api_count: int = 0
+    g_sb := sb_new_cap(4096)
 
+    // 7a. sitemap.xml
+    sb_append(g_sb, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n")
     let mut si: int = 0
-    let total_items: int = len(items)
     while si < total_items:
         arena:
-            let mut end_si: int = si + 128
-            if end_si > total_items:
-                end_si = total_items
+            let mut end_si: int = si + 256
+            if end_si > total_items: end_si = total_items
             while si < end_si:
                 it := items[si]
-                full_u := cfg.base_url + it.url
                 let mut prio: string = "0.8"
                 if it.url == "/index.html" or it.url == "/": prio = "1.0"
                 elif it.collection == "posts": prio = "0.9"
-                sb_append(sm_sb, "  <url><loc>" + ssg_escape_xml(full_u) + "</loc>")
+                sb_append(g_sb, "  <url><loc>" + ssg_escape_xml(cfg.base_url + it.url) + "</loc>")
                 if string_length(it.date) > 0:
-                    sb_append(sm_sb, "<lastmod>" + ssg_escape_xml(it.date) + "</lastmod>")
-                sb_append(sm_sb, "<priority>" + prio + "</priority></url>\n")
+                    sb_append(g_sb, "<lastmod>" + ssg_escape_xml(it.date) + "</lastmod>")
+                sb_append(g_sb, "<priority>" + prio + "</priority></url>\n")
+                si = si + 1
+    sb_append(g_sb, "</urlset>\n")
+    sm_len := g_sb.len
+    ssg_write_file_sb(ssg_path_join(cfg.dist_dir, "sitemap.xml"), g_sb)
 
+    // 7b. feed.xml (RSS 2.0)
+    g_sb.len = 0
+    sb_append(g_sb, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<rss version=\"2.0\" xmlns:atom=\"http://www.w3.org/2005/Atom\">\n  <channel>\n")
+    sb_append(g_sb, "    <title>" + ssg_escape_xml(cfg.site_name) + "</title>\n")
+    sb_append(g_sb, "    <link>" + ssg_escape_xml(cfg.base_url) + "</link>\n")
+    sb_append(g_sb, "    <description>" + ssg_escape_xml(cfg.site_tagline) + "</description>\n")
+    sb_append(g_sb, "    <atom:link href=\"" + ssg_escape_xml(cfg.base_url) + "/feed.xml\" rel=\"self\" type=\"application/rss+xml\" />\n")
+    si = 0
+    while si < total_items:
+        arena:
+            let mut end_si: int = si + 256
+            if end_si > total_items: end_si = total_items
+            while si < end_si:
+                it := items[si]
                 if it.collection == "posts" or len(post_indices) == 0:
-                    sb_append(feed_sb, "    <item>\n      <title>" + ssg_escape_xml(it.title) + "</title>\n")
-                    sb_append(feed_sb, "      <link>" + ssg_escape_xml(full_u) + "</link>\n")
-                    sb_append(feed_sb, "      <description>" + ssg_escape_xml(it.description) + "</description>\n")
+                    sb_append(g_sb, "    <item>\n      <title>" + ssg_escape_xml(it.title) + "</title>\n")
+                    sb_append(g_sb, "      <link>" + ssg_escape_xml(cfg.base_url + it.url) + "</link>\n")
+                    sb_append(g_sb, "      <description>" + ssg_escape_xml(it.description) + "</description>\n")
                     if string_length(it.date) > 0:
-                        sb_append(feed_sb, "      <pubDate>" + ssg_escape_xml(it.date) + "</pubDate>\n")
-                    sb_append(feed_sb, "    </item>\n")
+                        sb_append(g_sb, "      <pubDate>" + ssg_escape_xml(it.date) + "</pubDate>\n")
+                    sb_append(g_sb, "    </item>\n")
+                si = si + 1
+    sb_append(g_sb, "  </channel>\n</rss>\n")
+    fd_len := g_sb.len
+    ssg_write_file_sb(ssg_path_join(cfg.dist_dir, "feed.xml"), g_sb)
 
-                    sb_append(atom_sb, "  <entry>\n    <title>" + ssg_escape_xml(it.title) + "</title>\n")
-                    sb_append(atom_sb, "    <id>" + ssg_escape_xml(full_u) + "</id>\n")
-                    sb_append(atom_sb, "    <link href=\"" + ssg_escape_xml(full_u) + "\" />\n")
-                    sb_append(atom_sb, "    <summary>" + ssg_escape_xml(it.description) + "</summary>\n  </entry>\n")
+    // 7c. atom.xml
+    g_sb.len = 0
+    sb_append(g_sb, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<feed xmlns=\"http://www.w3.org/2005/Atom\">\n")
+    sb_append(g_sb, "  <title>" + ssg_escape_xml(cfg.site_name) + "</title>\n")
+    sb_append(g_sb, "  <id>" + ssg_escape_xml(cfg.base_url) + "/</id>\n")
+    sb_append(g_sb, "  <link href=\"" + ssg_escape_xml(cfg.base_url) + "/atom.xml\" rel=\"self\" />\n")
+    si = 0
+    while si < total_items:
+        arena:
+            let mut end_si: int = si + 256
+            if end_si > total_items: end_si = total_items
+            while si < end_si:
+                it := items[si]
+                if it.collection == "posts" or len(post_indices) == 0:
+                    full_u := cfg.base_url + it.url
+                    sb_append(g_sb, "  <entry>\n    <title>" + ssg_escape_xml(it.title) + "</title>\n")
+                    sb_append(g_sb, "    <id>" + ssg_escape_xml(full_u) + "</id>\n")
+                    sb_append(g_sb, "    <link href=\"" + ssg_escape_xml(full_u) + "\" />\n")
+                    sb_append(g_sb, "    <summary>" + ssg_escape_xml(it.description) + "</summary>\n  </entry>\n")
+                si = si + 1
+    sb_append(g_sb, "</feed>\n")
+    at_len := g_sb.len
+    ssg_write_file_sb(ssg_path_join(cfg.dist_dir, "atom.xml"), g_sb)
 
-                if si > 0: sb_append(srch_sb, ",\n")
-                sb_append(srch_sb, "  {\"title\": \"" + ssg_escape_json(it.title) + "\", \"url\": \"" + ssg_escape_json(it.url) + "\", \"desc\": \"" + ssg_escape_json(it.description) + "\", \"category\": \"" + ssg_escape_json(it.collection) + "\"}")
+    // 7d. search-index.json
+    g_sb.len = 0
+    sb_append(g_sb, "[\n")
+    si = 0
+    while si < total_items:
+        arena:
+            let mut end_si: int = si + 256
+            if end_si > total_items: end_si = total_items
+            while si < end_si:
+                it := items[si]
+                if si > 0: sb_append(g_sb, ",\n")
+                sb_append(g_sb, "  {\"title\": \"" + ssg_escape_json(it.title) + "\", \"url\": \"" + ssg_escape_json(it.url) + "\", \"desc\": \"" + ssg_escape_json(it.description) + "\", \"category\": \"" + ssg_escape_json(it.collection) + "\"}")
+                si = si + 1
+    sb_append(g_sb, "\n]\n")
+    sr_len := g_sb.len
+    ssg_write_file_sb(ssg_path_join(cfg.dist_dir, "search-index.json"), g_sb)
 
+    // 7e. api/posts.json
+    g_sb.len = 0
+    sb_append(g_sb, "[\n")
+    si = 0
+    while si < total_items:
+        arena:
+            let mut end_si: int = si + 256
+            if end_si > total_items: end_si = total_items
+            while si < end_si:
+                it := items[si]
                 if it.collection == "posts":
-                    if post_api_count > 0: sb_append(posts_api_sb, ",\n")
-                    sb_append(posts_api_sb, "  {\"title\": \"" + ssg_escape_json(it.title) + "\", \"url\": \"" + ssg_escape_json(it.url) + "\", \"date\": \"" + ssg_escape_json(it.date) + "\", \"tags\": \"" + ssg_escape_json(it.tags) + "\"}")
+                    if post_api_count > 0: sb_append(g_sb, ",\n")
+                    sb_append(g_sb, "  {\"title\": \"" + ssg_escape_json(it.title) + "\", \"url\": \"" + ssg_escape_json(it.url) + "\", \"date\": \"" + ssg_escape_json(it.date) + "\", \"tags\": \"" + ssg_escape_json(it.tags) + "\"}")
                     post_api_count = post_api_count + 1
+                si = si + 1
+    sb_append(g_sb, "\n]\n")
+    pa_len := g_sb.len
+    ssg_write_file_sb(ssg_path_join(cfg.dist_dir, "api/posts.json"), g_sb)
 
+    // 7f. api/chapters.json & per-chapter json
+    g_sb.len = 0
+    sb_append(g_sb, "[\n")
+    si = 0
+    while si < total_items:
+        arena:
+            let mut end_si: int = si + 256
+            if end_si > total_items: end_si = total_items
+            while si < end_si:
+                it := items[si]
                 cn := _builder_extract_chapter_num(it.slug)
                 if cn > 0:
-                    if chap_api_count > 0: sb_append(chap_api_sb, ",\n")
-                    sb_append(chap_api_sb, "  {\"id\": " + str(cn) + ", \"slug\": \"" + ssg_escape_json(it.slug) + "\", \"title\": \"" + ssg_escape_json(it.title) + "\", \"url\": \"" + ssg_escape_json(it.url) + "\"}")
+                    if chap_api_count > 0: sb_append(g_sb, ",\n")
+                    sb_append(g_sb, "  {\"id\": " + str(cn) + ", \"slug\": \"" + ssg_escape_json(it.slug) + "\", \"title\": \"" + ssg_escape_json(it.title) + "\", \"url\": \"" + ssg_escape_json(it.url) + "\"}")
                     chap_api_count = chap_api_count + 1
                     ssg_write_file_raw(ssg_path_join(cfg.dist_dir, "api/" + it.slug + ".json"), "{\n  \"id\": " + str(cn) + ",\n  \"slug\": \"" + ssg_escape_json(it.slug) + "\",\n  \"title\": \"" + ssg_escape_json(it.title) + "\",\n  \"url\": \"" + ssg_escape_json(it.url) + "\"\n}\n")
                 si = si + 1
-
-    sb_append(sm_sb, "</urlset>\n")
-    sb_append(feed_sb, "  </channel>\n</rss>\n")
-    sb_append(atom_sb, "</feed>\n")
-    sb_append(srch_sb, "\n]\n")
-    sb_append(posts_api_sb, "\n]\n")
-    sb_append(chap_api_sb, "\n]\n")
-
-    sm_str := sb_to_str(sm_sb); sb_free(sm_sb)
-    fd_str := sb_to_str(feed_sb); sb_free(feed_sb)
-    at_str := sb_to_str(atom_sb); sb_free(atom_sb)
-    sr_str := sb_to_str(srch_sb); sb_free(srch_sb)
-    pa_str := sb_to_str(posts_api_sb); sb_free(posts_api_sb)
-    ca_str := sb_to_str(chap_api_sb); sb_free(chap_api_sb)
-
-    file_write(ssg_path_join(cfg.dist_dir, "sitemap.xml"), sm_str)
-    file_write(ssg_path_join(cfg.dist_dir, "feed.xml"), fd_str)
-    file_write(ssg_path_join(cfg.dist_dir, "atom.xml"), at_str)
-    file_write(ssg_path_join(cfg.dist_dir, "search-index.json"), sr_str)
-    file_write(ssg_path_join(cfg.dist_dir, "api/posts.json"), pa_str)
-    file_write(ssg_path_join(cfg.dist_dir, "api/chapters.json"), ca_str)
+    sb_append(g_sb, "\n]\n")
+    ca_len := g_sb.len
+    ssg_write_file_sb(ssg_path_join(cfg.dist_dir, "api/chapters.json"), g_sb)
+    sb_free(g_sb)
 
     robots := "User-agent: *\nAllow: /\nSitemap: " + cfg.base_url + "/sitemap.xml\n"
     if file_exists(ssg_path_join(cfg.dist_dir, "robots.txt")) == 0:
@@ -1065,7 +1166,7 @@ fn builder_run_all(cfg: SsgConfig) -> BuildReport:
     site_api := "{\n  \"site_name\": \"" + ssg_escape_json(cfg.site_name) + "\",\n  \"tagline\": \"" + ssg_escape_json(cfg.site_tagline) + "\",\n  \"base_url\": \"" + ssg_escape_json(cfg.base_url) + "\",\n  \"pages\": " + str(pages_built) + ",\n  \"posts\": " + str(posts_built) + ",\n  \"total_chapters\": " + str(total_chapters) + ",\n  \"generator\": \"cluster-ssg\",\n  \"version\": \"2.0.0\"\n}\n"
     file_write(ssg_path_join(cfg.dist_dir, "api/index.json"), site_api)
 
-    total_bytes = total_bytes + string_length(sm_str) + string_length(fd_str) + string_length(at_str) + string_length(sr_str) + string_length(pa_str) + string_length(ca_str) + string_length(site_api)
+    total_bytes = total_bytes + sm_len + fd_len + at_len + sr_len + pa_len + ca_len + string_length(site_api)
 
     t1 := ssg_clock_us()
     let mut ms: int = (t1 - t0) / 1000

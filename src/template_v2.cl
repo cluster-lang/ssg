@@ -624,11 +624,14 @@ fn _tmpl_render_internal(tr: TemplateRegistry, tmpl: string, vars: dict[string, 
                             inc_vars[pk] = pv
                         pi = pi + 1
                     sb_append(sb, _tmpl_render_internal(tr, inc_html, inc_vars, ctx, depth + 1))
+                    dict_free(inc_vars)
                 else:
                     inc_name = ssg_strip_quotes(inc_rest)
                     inc_html := template_get_include(tr, inc_name)
                     if ssg_contains(inc_html, "{% assign ") == 1 or ssg_contains(inc_html, "{% capture ") == 1:
-                        sb_append(sb, _tmpl_render_internal(tr, inc_html, _tmpl_clone_dict(vars), ctx, depth + 1))
+                        tmp_iv := _tmpl_clone_dict(vars)
+                        sb_append(sb, _tmpl_render_internal(tr, inc_html, tmp_iv, ctx, depth + 1))
+                        dict_free(tmp_iv)
                     else:
                         sb_append(sb, _tmpl_render_internal(tr, inc_html, vars, ctx, depth + 1))
             elif ssg_starts_with(expr, "<") == 0:
@@ -667,11 +670,14 @@ fn _tmpl_render_internal(tr: TemplateRegistry, tmpl: string, vars: dict[string, 
                         inc_vars[pk] = pv
                     pi = pi + 1
                 sb_append(sb, _tmpl_render_internal(tr, inc_html, inc_vars, ctx, depth + 1))
+                dict_free(inc_vars)
             else:
                 inc_name = ssg_strip_quotes(inc_rest)
                 inc_html := template_get_include(tr, inc_name)
                 if ssg_contains(inc_html, "{% assign ") == 1 or ssg_contains(inc_html, "{% capture ") == 1:
-                    sb_append(sb, _tmpl_render_internal(tr, inc_html, _tmpl_clone_dict(vars), ctx, depth + 1))
+                    tmp_iv2 := _tmpl_clone_dict(vars)
+                    sb_append(sb, _tmpl_render_internal(tr, inc_html, tmp_iv2, ctx, depth + 1))
+                    dict_free(tmp_iv2)
                 else:
                     sb_append(sb, _tmpl_render_internal(tr, inc_html, vars, ctx, depth + 1))
             pos = end_t + 2
@@ -1048,14 +1054,18 @@ fn _template_v2_render_impl(tr: TemplateRegistry, layout_name: string, body_html
             if fm.fields.has("layout") == 1:
                 parent_layout = fm.fields["layout"]
         let mut vars: dict[string, string] = page_vars
+        let mut owns_vars: int = 0
         if clone_first == 1 or hops > 0:
             vars = _tmpl_clone_dict(page_vars)
+            owns_vars = 1
         vars["content"] = cur_content
         vars["site_name"] = ctx.config.site_name
         vars["site_tagline"] = ctx.config.site_tagline
         vars["base_url"] = ctx.config.base_url
         vars["year"] = "2026"
         cur_content = _tmpl_render_internal(tr, lbody, vars, ctx, 0)
+        if owns_vars == 1:
+            dict_free(vars)
         if parent_layout == cur_layout:
             break
         cur_layout = parent_layout

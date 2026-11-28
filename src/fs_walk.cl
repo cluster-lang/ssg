@@ -131,6 +131,20 @@ fn ssg_write_file_raw(path: string, data: string) -> int:
     close(fd)
     return tot
 
+fn ssg_write_file_sb(path: string, sb: StrBuf) -> int:
+    fd := open(str_cstr(path), 577, 420)
+    if fd < 0:
+        return -1
+    let mut tot: int = 0
+    if sb.len > 0 and sb.buf != null:
+        while tot < sb.len:
+            nw := write(fd, ptr_add(sb.buf, tot), sb.len - tot)
+            if nw <= 0:
+                break
+            tot = tot + nw
+    close(fd)
+    return tot
+
 model ZlibCodec:
     lib_handle: ptr
     fn_gzopen: ptr
@@ -214,11 +228,10 @@ fn _fs_walk_rec(base_dir: string, rel_dir: string, exts: vector[string], out_abs
                 out_abs.push(full)
                 out_rel.push(next_rel)
             else:
-                ext := ssg_path_ext(name)
                 let mut matched: int = 0
                 let mut ei: int = 0
                 while ei < len(exts):
-                    if ext == exts[ei]:
+                    if ssg_ends_with(name, exts[ei]) == 1:
                         matched = 1
                         break
                     ei = ei + 1

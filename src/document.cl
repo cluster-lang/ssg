@@ -189,22 +189,8 @@ fn ssg_scan_page_header(abs_path: string, rel_path: string, collection: string, 
     else:
         url = _doc_resolve_permalink_parts(permalink_tmpl, perm_override, date, slug, collection, cats, rel_path)
     outp := ssg_url_to_dist_path(dist_dir, url)
-    hdr := SsgPageHeader()
-    hdr.source = SsgPageSource(abs_path, rel_path, collection, url, outp, 0)
-    hdr.fm_fields = fm.fields
-    hdr.title = title
-    hdr.author = author
-    hdr.date = date
-    hdr.layout = layout
-    hdr.tags = tags
-    hdr.categories = cats
-    hdr.slug = slug
-    hdr.description = desc
-    hdr.lang = lang
-    hdr.plain_excerpt = excerpt
-    hdr.reading_time_min = ssg_estimate_reading_time(wc)
-    hdr.is_draft = is_draft
-    return hdr
+    dict_free(fm.list_keys)
+    return SsgPageHeader(SsgPageSource(abs_path, rel_path, collection, url, outp, 0), fm.fields, title, author, date, layout, tags, cats, slug, desc, lang, excerpt, ssg_estimate_reading_time(wc), is_draft)
 
 fn ssg_count_words(text: string) -> int:
     tlen := string_length(text)

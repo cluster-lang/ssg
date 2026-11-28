@@ -391,7 +391,12 @@ fn assets_process_all(site_dir: string, dist_dir: string, minify: int, hash_asse
     return man
 
 fn _assets_inject_img_dims(html: string, man: AssetManifest) -> string:
-    if len(man.img_dims.keys()) == 0 or ssg_contains(html, "<img") == 0:
+    if ssg_contains(html, "<img") == 0:
+        return html
+    dk := man.img_dims.keys()
+    ndk := len(dk)
+    list_free(dk)
+    if ndk == 0:
         return html
     hlen := string_length(html)
     sb := sb_new_cap(hlen + 64)
@@ -420,7 +425,9 @@ fn _assets_inject_img_dims(html: string, man: AssetManifest) -> string:
                         if x_pos > 0:
                             w_s := substring(wh, 0, x_pos)
                             h_s := substring(wh, x_pos + 1, string_length(wh) - x_pos - 1)
-                            ins := " width=\"" + w_s + "\" height=\"" + h_s + "\""
+                            let mut ins: string = " width=\"" + w_s + "\" height=\"" + h_s + "\""
+                            if ssg_contains(tag, "loading=") == 0:
+                                ins = ins + " loading=\"lazy\" decoding=\"async\""
                             tlen := string_length(tag)
                             if tlen >= 2 and byte_at(tag, tlen - 2) == 47:
                                 out_tag = substring(tag, 0, tlen - 2) + ins + " />"
@@ -433,6 +440,8 @@ fn _assets_inject_img_dims(html: string, man: AssetManifest) -> string:
     return out
 
 fn assets_rewrite_html_urls(html: string, man: AssetManifest) -> string:
+    if man.files_copied == 0:
+        return _assets_inject_img_dims(html, man)
     let mut out: string = html
     keys := man.url_map.keys()
     let mut i: int = 0
@@ -442,4 +451,5 @@ fn assets_rewrite_html_urls(html: string, man: AssetManifest) -> string:
         if k != v and ssg_contains(out, k) == 1:
             out = ssg_replace_all(out, k, v)
         i = i + 1
+    list_free(keys)
     return _assets_inject_img_dims(out, man)
